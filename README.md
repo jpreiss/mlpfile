@@ -7,15 +7,12 @@ python_example
 |----------------------|--------|
 | Linux/macOS Travis   | [![Travis-CI][travis-badge]][travis-link] |
 | MSVC 2019            | [![AppVeyor][appveyor-badge]][appveyor-link] |
-| conda.recipe         | [![Conda Actions Status][actions-conda-badge]][actions-conda-link] |
 | pip builds           | [![Pip Actions Status][actions-pip-badge]][actions-pip-link] |
 | [`cibuildwheel`][]   | [![Wheels Actions Status][actions-wheels-badge]][actions-wheels-link] |
 
 [gitter-badge]:            https://badges.gitter.im/pybind/Lobby.svg
 [gitter-link]:             https://gitter.im/pybind/Lobby
 [actions-badge]:           https://github.com/pybind/python_example/workflows/Tests/badge.svg
-[actions-conda-link]:      https://github.com/pybind/python_example/actions?query=workflow%3A%22Conda
-[actions-conda-badge]:     https://github.com/pybind/python_example/workflows/Conda/badge.svg
 [actions-pip-link]:        https://github.com/pybind/python_example/actions?query=workflow%3A%22Pip
 [actions-pip-badge]:       https://github.com/pybind/python_example/workflows/Pip/badge.svg
 [actions-wheels-link]:     https://github.com/pybind/python_example/actions?query=workflow%3AWheels
@@ -42,7 +39,7 @@ CI Examples
 There are examples for CI in `.github/workflows`. A simple way to produces
 binary "wheels" for all platforms is illustrated in the "wheels.yml" file,
 using [`cibuildwheel`][]. You can also see a basic recipe for building and
-testing in `pip.yml`, and `conda.yml` has an example of a conda recipe build.
+testing in `pip.yml`.
 
 
 Building the documentation
