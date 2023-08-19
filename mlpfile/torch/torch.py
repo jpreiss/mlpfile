@@ -2,6 +2,23 @@ import torch
 
 
 def mlp(indim, outdim, hidden):
+    """Construct a multilayer perceptron that can be represented by mlpfile.
+
+    Will use ReLU activation automatically.
+
+    PyTorch contains some tools that modify the training of an MLP but do not
+    change its architecture, such as spectral normalization. To use these
+    tools, please construct the ``torch.nn.Sequential`` yourself instead of using
+    this function.
+
+    Args:
+        indim (int): Input dimension.
+        outdim (int): Output dimension.
+        hidden (List[int]): List of hidden layer dimensions.
+
+    Returns:
+        a ``torch.nn.Sequential`` module.
+    """
     dims = [indim] + hidden
     layers = []
     for i in range(len(dims) - 1):
@@ -12,7 +29,17 @@ def mlp(indim, outdim, hidden):
 
 
 def write(model: torch.nn.Sequential, path):
-    """Writes a fully connected ReLU network to our format (see mlpfile.h)."""
+    """Writes a fully connected ReLU network to our file format.
+
+    See top-level module documentation for binary format information.
+
+    Args:
+        model (torch.nn.Sequential): Trained model, such as one with the
+            structure returned by :meth:`mlp()`.
+        path (path-like): A `path-like object
+            <https://docs.python.org/3/glossary.html#term-path-like-object>`_
+            where the file should be written.
+    """
     INPUT = 1
     LINEAR = 2
     RELU = 3

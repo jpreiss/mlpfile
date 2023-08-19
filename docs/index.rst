@@ -1,9 +1,11 @@
-python_example Documentation
-============================
+mlpfile Documentation
+=====================
 
-Contents:
+.. automodule:: mlpfile
+   :members:
 
-.. toctree::
-   :maxdepth: 2
+mlpfile.torch
+-------------
 
-   python_example
+.. automodule:: mlpfile.torch
+   :members:
