@@ -1,11 +1,5 @@
-mlpfile Documentation
-=====================
+.. toctree::
+   :maxdepth: 2
 
-.. automodule:: mlpfile
-   :members:
-
-mlpfile.torch
--------------
-
-.. automodule:: mlpfile.torch
-   :members:
+   overview
+   api

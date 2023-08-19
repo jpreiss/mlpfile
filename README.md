@@ -1,72 +1,144 @@
-python_example
-==============
+A simple file format and associated tools to save/load multilayer perceptrons
+(aka fully-connected neural networks).
 
-[![Gitter][gitter-badge]][gitter-link]
+Features:
+- Create the files in Python from a `torch.nn.Sequential`.
+- Load the files in C++, or in Python via bindings.
+- Evaluate the network and/or its Jacobian on an input.
+- C++ interface uses Eigen types.
+- Binary file I/O (no C++ dependency on Protobuf, etc.)
 
-|      CI              | status |
-|----------------------|--------|
-| Linux/macOS Travis   | [![Travis-CI][travis-badge]][travis-link] |
-| MSVC 2019            | [![AppVeyor][appveyor-badge]][appveyor-link] |
-| pip builds           | [![Pip Actions Status][actions-pip-badge]][actions-pip-link] |
-| [`cibuildwheel`][]   | [![Wheels Actions Status][actions-wheels-badge]][actions-wheels-link] |
-
-[gitter-badge]:            https://badges.gitter.im/pybind/Lobby.svg
-[gitter-link]:             https://gitter.im/pybind/Lobby
-[actions-badge]:           https://github.com/pybind/python_example/workflows/Tests/badge.svg
-[actions-pip-link]:        https://github.com/pybind/python_example/actions?query=workflow%3A%22Pip
-[actions-pip-badge]:       https://github.com/pybind/python_example/workflows/Pip/badge.svg
-[actions-wheels-link]:     https://github.com/pybind/python_example/actions?query=workflow%3AWheels
-[actions-wheels-badge]:    https://github.com/pybind/python_example/workflows/Wheels/badge.svg
-[travis-link]:             https://travis-ci.org/pybind/python_example
-[travis-badge]:            https://travis-ci.org/pybind/python_example.svg?branch=master&status=passed
-[appveyor-link]:           https://ci.appveyor.com/project/wjakob/python-example
-<!-- TODO: get a real badge link for appveyor -->
-[appveyor-badge]:          https://travis-ci.org/pybind/python_example.svg?branch=master&status=passed
-
-An example project built with [pybind11](https://github.com/pybind/pybind11).
-This requires Python 3.7+; for older versions of Python, check the commit
-history.
 
 Installation
 ------------
 
- - clone this repository
- - `pip install ./python_example`
-
-CI Examples
------------
-
-There are examples for CI in `.github/workflows`. A simple way to produces
-binary "wheels" for all platforms is illustrated in the "wheels.yml" file,
-using [`cibuildwheel`][]. You can also see a basic recipe for building and
-testing in `pip.yml`.
+**TODO**: The `pip` package is almost ready.
 
 
-Building the documentation
---------------------------
+Example code
+------------
 
-Documentation for the example project is generated using Sphinx. Sphinx has the
-ability to automatically inspect the signatures and documentation strings in
-the extension module to generate beautiful documentation in a variety formats.
-The following command generates HTML-based reference documentation; for other
-formats please refer to the Sphinx manual:
+**Python:**
 
- - `cd python_example/docs`
- - `make html`
+```
+model_torch = <train a torch.nn.Sequential somehow>
+mlpfile.torch.write(model_torch, "net.mlp")
 
-License
--------
-
-pybind11 is provided under a BSD-style license that can be found in the LICENSE
-file. By using, distributing, or contributing to this project, you agree to the
-terms and conditions of this license.
-
-Test call
----------
-
-```python
-import python_example
-python_example.add(1, 2)
+model_ours = mlpfile.Model.load("net.mlp")
+x = <appropriate input>
+y = model.forward(x)
 ```
 
-[`cibuildwheel`]:          https://cibuildwheel.readthedocs.io
+**C++:**
+
+```
+mlpfile::Model model = mlpfile::Model::load("net.mlp");
+Eigen::VectorXf x = <appropriate input>;
+Eigen::VectorXf y = model.forward(x);
+```
+
+Performance
+-----------
+
+`mlpfile` is faster than popular alternatives for small networks on the CPU.
+This is a very small example, but such small networks can appear in
+time-sensitive realtime applications.
+
+Test hardware is a 2021 MacBook Pro with Apple M1 Pro CPU.
+
+`mlpfile` is over 3x faster than ONNX on both forward pass and Jacobian in this
+test. You can test on your own hardware by running `benchmark.py`.
+
+```
+$ python benchmark.py
+
+mlpfile::Model with 6 Layers
+Input: 40
+Linear: 40 -> 100
+ReLU
+Linear: 100 -> 100
+ReLU
+Linear: 100 -> 10
+
+***********
+* Forward *
+***********
+torch:   23.79 usec
+ onnx:    6.67 usec
+ ours:    1.95 usec
+
+************
+* Jacobian *
+************
+torch-autodiff:  246.24 usec
+  torch-manual:   52.66 usec
+   onnx-python:   42.85 usec
+          ours:   11.61 usec
+```
+
+Motivation
+----------
+
+The performace shown above is a major motivation, but besides that:
+
+The typical choices for NN deployment from PyTorch to C++ (of which I am aware)
+are TorchScript and the ONNX format. Both are heavyweight and complicated
+because they are designed to handle general computation graphs like ResNets,
+Transformers, etc. Their Python packages are somewhat easy to use via `pip`,
+but their C++ packages aren't a part of standard package managers, and
+compiling from source (at least for ONNX-runtime) is very slow.
+
+Intel and NVidia's ONNX loaders might be better, but they are not cross-platform.
+
+ONNX-runtime also doesn't make it easy to extract the model weights from the
+file. This means we can't (easily) use their file format and loader but compute
+the neural network function ourselves for maximum speed.
+
+Also, we want to evaluate the NN's Jacobian. To do this with ONNX, we need to
+represent the MLP Jacobian's computational graph in the file instead of the MLP
+itself. It turns out that PyTorch's `torch.func` module for automatic Jacobian
+computations generates a computational graph that can't be serialized with
+PyTorch's own ONNX exporter. The computation graph nodes like "backwards pass
+of ReLU" aren't supported in ONNX. Therefore, we need to write the
+symbolically-derived Jacobian computation by hand in PyTorch. So that unwanted
+complexity must exist *somewhere*, whether it is C++ or Python.
+
+It's possible that TorchScript is better than ONNX in some of these
+deficiencies, but I got tired of working with bulky libraries and wanted to
+ensure top speed anyway.
+
+
+File format
+-----------
+
+It is a binary file format. All numerical types are little-endian, but the code
+currently assumes it's running on a little-endian machine.
+
+The file format is not stable!
+
+```text
+layer types enum:
+    1 - input
+    2 - linear
+    3 - relu
+
+header:
+    number of layers (uint32)
+
+    for each layer:
+        enum layer type (uint32)
+        if input:
+            input dim (uint32)
+        if linear:
+            output dim (uint32)
+        if relu:
+            nothing
+
+data:
+    for each layer:
+        if linear:
+            weight (float32[], row-major)
+            bias (float32[])
+        otherwise:
+            nothing
+```

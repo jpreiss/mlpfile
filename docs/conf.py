@@ -30,6 +30,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
+    "sphinx_mdinclude",
 ]
 
 autosummary_generate = True
