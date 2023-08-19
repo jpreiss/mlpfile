@@ -25,7 +25,7 @@ setup(
     py_modules=["mlpfile", "mlpfile.torch"],
     requires=["numpy"],
     extras_require={
-        "test": "pytest",
+        "test": ["pytest", "torch"],
         "torch": "torch",
     },
     zip_safe=False,  # TODO: Understand.
