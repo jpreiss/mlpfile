@@ -1,5 +1,6 @@
 # Available at setup time due to pyproject.toml
-from pybind11.setup_helpers import Pybind11Extension, build_ext
+import eigenpip
+from pybind11.setup_helpers import Pybind11Extension
 from setuptools import setup
 
 __version__ = "0.0.1"
@@ -14,26 +15,24 @@ __version__ = "0.0.1"
 #   reproducible builds (https://github.com/pybind/python_example/pull/53)
 
 ext_modules = [
-    Pybind11Extension("python_example",
-        ["src/main.cpp"],
-        # Example: passing in the version to the compiled code
-        define_macros = [('VERSION_INFO', __version__)],
+    Pybind11Extension("_mlpfile_bindings",
+        ["src/bindings.cpp", "src/mlpfile.cpp"],
+        include_dirs = [eigenpip.get_include()],
+        cxx_std=11,
         ),
 ]
 
 setup(
-    name="python_example",
+    name="mlpfile",
     version=__version__,
-    author="Sylvain Corlay",
-    author_email="sylvain.corlay@gmail.com",
-    url="https://github.com/pybind/python_example",
-    description="A test project using pybind11",
+    author="James A. Preiss",
+    author_email="jamesalanpreiss@gmail.com",
+    url="https://github.com/jpreiss/mlpfile",
+    description="Multilayer perceptron file format and evaluation.",
     long_description="",
     ext_modules=ext_modules,
+    py_modules=["mlpfile", "_mlpfile_python"],
     extras_require={"test": "pytest"},
-    # Currently, build_ext only provides an optional "highest supported C++
-    # level" feature, but in the future it may provide more features.
-    cmdclass={"build_ext": build_ext},
-    zip_safe=False,
+    zip_safe=False,  # TODO: Understand.
     python_requires=">=3.7",
 )
