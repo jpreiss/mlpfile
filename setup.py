@@ -22,7 +22,7 @@ setup(
     description="Multilayer perceptron file format and evaluation.",
     long_description="",
     ext_modules=ext_modules,
-    py_modules=["mlpfile", "mlpfile.torch"],
+    packages=["mlpfile", "mlpfile.torch"],
     requires=["numpy"],
     extras_require={
         "test": ["pytest", "torch"],
