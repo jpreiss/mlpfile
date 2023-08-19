@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest, macos-latest, ubuntu-latest]
+        platform: [macos-latest, ubuntu-latest]
         python-version: ["3.7", "3.11"]
 
     runs-on: ${{ matrix.platform }}
@@ -34,5 +34,11 @@ jobs:
     - name: Build and install
       run: pip install --verbose .
 
-    - name: Test
+    - name: Import Test
+      run: python -c "import mlpfile; import mlpfile.torch"
+
+    - name: Unit Test
+      # The unit tests use a recent feature of PyTorch to construct their
+      # Jacobian for comparison. So it cannot run on old versions of Python.
       run: pytest tests/test.py
+      if: matrix.python-version == "3.11"
