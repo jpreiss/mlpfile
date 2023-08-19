@@ -7,7 +7,7 @@ __version__ = "0.0.1"
 
 ext_modules = [
     Pybind11Extension("_mlpfile_bindings",
-        ["src/bindings.cpp", "src/mlpfile.cpp"],
+        ["mlpfile/cpp/bindings.cpp", "mlpfile/cpp/mlpfile.cpp"],
         include_dirs = [eigenpip.get_include()],
         cxx_std=11,
         ),
@@ -23,6 +23,9 @@ setup(
     long_description="",
     ext_modules=ext_modules,
     packages=["mlpfile", "mlpfile.torch"],
+    package_data={
+        "mlpfile": ["cpp/mlpfile.h", "cpp/mlpfile.cpp"]
+    },
     requires=["numpy"],
     extras_require={
         "test": ["pytest", "torch"],
