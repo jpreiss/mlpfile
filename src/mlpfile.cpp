@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <memory>
 
 #include "mlpfile.h"
 

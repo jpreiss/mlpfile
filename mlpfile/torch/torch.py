@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 
@@ -12,7 +11,7 @@ def mlp(indim, outdim, hidden):
     return torch.nn.Sequential(*layers)
 
 
-def write_torch(model: torch.nn.Sequential, path):
+def write(model: torch.nn.Sequential, path):
     """Writes a fully connected ReLU network to our format (see mlpfile.h)."""
     INPUT = 1
     LINEAR = 2
@@ -45,12 +44,12 @@ def write_torch(model: torch.nn.Sequential, path):
         # TODO: We should enforce little-endian explicitly, here + the loader.
         for m in model:
             if isinstance(m, torch.nn.Linear):
-                W = m.weight.detach().numpy().astype(np.float32)
+                W = m.weight.detach().to(torch.float32).numpy()
                 W = W.reshape(*W.shape, order="C")
                 bW = W.tobytes()
                 assert len(bW) == W.size * 4
                 f.write(bW)
-                b = m.bias.detach().numpy().astype(np.float32)
+                b = m.bias.detach().to(torch.float32).numpy()
                 bb = b.tobytes()
                 assert len(bb) == b.size * 4
                 f.write(bb)
