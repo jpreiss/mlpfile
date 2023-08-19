@@ -1,1 +1,1 @@
-from torch import mlp, write
+from .torch import mlp, write

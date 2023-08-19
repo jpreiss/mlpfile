@@ -5,12 +5,13 @@ import pytest
 import torch
 
 import mlpfile
+import mlpfile.torch
 
 
 INDIM = 40
 OUTDIM = 10
 HIDDEN = [100] * 2
-NET = mlpfile.mlp(INDIM, OUTDIM, HIDDEN)
+NET = mlpfile.torch.mlp(INDIM, OUTDIM, HIDDEN)
 NET.eval()
 JAC = torch.func.jacrev(NET)
 
@@ -21,7 +22,7 @@ JAC = torch.func.jacrev(NET)
 @pytest.fixture(scope="module", autouse=True)
 def model():
     with tempfile.NamedTemporaryFile() as f:
-        mlpfile.write_torch(NET, f.name)
+        mlpfile.torch.write(NET, f.name)
         model = mlpfile.Model.load(f.name)
         yield model
 
