@@ -27,6 +27,10 @@ PYBIND11_MODULE(_mlpfile_bindings, m) {
             py::arg("path"))
         .def_readonly("layers", &mlpfile::Model::layers,
             "List of the Layer objects.")
+        .def("input_dim", &mlpfile::Model::input_dim,
+            "Input dimensionality.")
+        .def("output_dim", &mlpfile::Model::output_dim,
+            "Output dimensionality.")
         .def("forward", &mlpfile::Model::forward,
             "Computes the MLP's forward pass.",
             py::arg("input"))

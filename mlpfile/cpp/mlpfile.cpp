@@ -49,6 +49,9 @@ namespace mlpfile
 		};
 
 		uint32_t n_layers = readu32();
+		if (n_layers == 0) {
+			throw std::runtime_error("Model has no layers.");
+		}
 		model.layers.resize(n_layers);
 
 		uint32_t size = 0;
@@ -57,8 +60,11 @@ namespace mlpfile
 		for (int i = 0; i < n_layers; ++i) {
 			Layer &layer = model.layers[i];
 			layer.type = (LayerType)readu32();
+			if (i == 0 && layer.type != Input) {
+				throw std::runtime_error("First layer should be input.");
+			}
 			if (layer.type == Input) {
-				if (size != 0) {
+				if (i != 0) {
 					throw std::runtime_error("Input layer appeared in wrong place.");
 				}
 				size = readu32();
@@ -108,6 +114,31 @@ namespace mlpfile
 		}
 
 		return model;
+	}
+
+	int Model::input_dim() const
+	{
+		assert (layers[0].type == Input);
+		return layers[0].input_size;
+	}
+
+	int Model::output_dim() const
+	{
+		for (int i = layers.size() - 1; i >= 0; --i) {
+			Layer const &layer = layers[i];
+			switch (layer.type) {
+			case Input:
+				// Degenerate case, empty model, but allowed.
+				return layer.input_size;
+			case Linear:
+				// Typical case.
+				return layer.b.rows();
+			case ReLU:
+				// Model ends in ReLU, not typical, but allowed.
+				break;
+			}
+		}
+		assert (false);
 	}
 
 	Eigen::VectorXf Model::forward(Eigen::VectorXf x)

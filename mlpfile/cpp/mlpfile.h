@@ -36,6 +36,11 @@ namespace mlpfile
 		// Reads a model from our file format (see block comment at top of file).
 		static Model load(char const *path);
 
+		int input_dim() const;
+
+		int output_dim() const;
+
+
 		// Computes the forward pass of the neural network.
 		Eigen::VectorXf forward(Eigen::VectorXf x);
 
