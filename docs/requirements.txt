@@ -1,0 +1,5 @@
+numpy
+torch
+Sphinx
+sphinx_mdinclude
+sphinx_rtd_theme
