@@ -20,7 +20,8 @@ setup(
     author_email="jamesalanpreiss@gmail.com",
     url="https://github.com/jpreiss/mlpfile",
     description="Multilayer perceptron file format and evaluation.",
-    long_description="",
+    long_description=open("README.md", "r").read(),
+    long_description_content_type="text/markdown",
     ext_modules=ext_modules,
     packages=["mlpfile", "mlpfile.torch"],
     package_data={
