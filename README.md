@@ -8,6 +8,8 @@ Features:
 - C++ interface uses Eigen types.
 - Binary file I/O (no C++ dependency on Protobuf, etc.)
 
+API docs: [https://jpreiss.github.io/mlpfile/api.html](https://jpreiss.github.io/mlpfile/api.html)
+
 
 Installation
 ------------
@@ -84,9 +86,9 @@ The performace shown above is a major motivation, but besides that:
 The typical choices for NN deployment from PyTorch to C++ (of which I am aware)
 are TorchScript and the ONNX format. Both are heavyweight and complicated
 because they are designed to handle general computation graphs like ResNets,
-Transformers, etc. Their Python packages are somewhat easy to use via `pip`,
-but their C++ packages aren't a part of standard package managers, and
-compiling from source (at least for ONNX-runtime) is very slow.
+Transformers, etc. Their Python packages are easy to use via `pip`, but their
+C++ packages aren't a part of standard package managers, and compiling from
+source (at least for ONNX-runtime) is very slow.
 
 Intel and NVidia's ONNX loaders might be better, but they are not cross-platform.
 
@@ -94,18 +96,16 @@ ONNX-runtime also doesn't make it easy to extract the model weights from the
 file. This means we can't (easily) use their file format and loader but compute
 the neural network function ourselves for maximum speed.
 
-Also, we want to evaluate the NN's Jacobian. To do this with ONNX, we need to
-represent the MLP Jacobian's computational graph in the file instead of the MLP
-itself. It turns out that PyTorch's `torch.func` module for automatic Jacobian
-computations generates a computational graph that can't be serialized with
-PyTorch's own ONNX exporter. The computation graph nodes like "backwards pass
-of ReLU" aren't supported in ONNX. Therefore, we need to write the
-symbolically-derived Jacobian computation by hand in PyTorch. So that unwanted
-complexity must exist *somewhere*, whether it is C++ or Python.
+Also, we want to evaluate the NN's Jacobian in our research application. To do
+this with ONNX, we must represent the MLP Jacobian's computational graph in the
+file instead of the MLP itself. It turns out that PyTorch's `torch.func.jacrev`
+generates a computational graph that can't be serialized with PyTorch's own
+ONNX exporter. Therefore, we must write the symbolically-derived Jacobian by
+hand in PyTorch. So that unwanted complexity must exist *somewhere*, whether it
+is C++ or Python.
 
-It's possible that TorchScript is better than ONNX in some of these
-deficiencies, but I got tired of working with bulky libraries and wanted to
-ensure top speed anyway.
+It's possible that TorchScript is better than ONNX in some of these issues, but
+I was tired of searching for libraries and wanted to ensure top speed anyway.
 
 
 File format
