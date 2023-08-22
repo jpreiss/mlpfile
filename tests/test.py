@@ -42,3 +42,14 @@ def test_jacobian(model):
         Jtorch = JAC(x).detach().numpy()
         # TODO: Why do we need to loosen the tolerance?
         assert np.all(np.isclose(J.flat, Jtorch.flat, atol=1e-6, rtol=1e-4))
+
+def test_random():
+    r = mlpfile.Model.random(2, [3, 4], 5)
+    assert len(r.layers) == 6
+    types = [lay.type for lay in r.layers]
+    linear = mlpfile.LayerType.Linear
+    relu = mlpfile.LayerType.ReLU
+    assert types == [mlpfile.LayerType.Input, linear, relu, linear, relu, linear]
+    y = r.forward([0, 0])
+    assert y.size == 5
+    r.jacobian([0, 0])

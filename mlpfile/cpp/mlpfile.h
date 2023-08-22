@@ -36,10 +36,13 @@ namespace mlpfile
 		// Reads a model from our file format (see block comment at top of file).
 		static Model load(char const *path);
 
+		// Generates a random NN with Xavier-uniform initialization. Mainly
+		// intended for unit test, etc, where the NN function doesn't matter.
+		static Model random(int input, std::vector<int> hidden, int output);
+
 		int input_dim() const;
 
 		int output_dim() const;
-
 
 		// Computes the forward pass of the neural network.
 		Eigen::VectorXf forward(Eigen::VectorXf x);

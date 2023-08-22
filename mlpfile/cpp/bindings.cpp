@@ -8,6 +8,13 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(_mlpfile_bindings, m) {
 
+    py::enum_<mlpfile::LayerType>(m, "LayerType")
+        .value("Input", mlpfile::LayerType::Input)
+        .value("Linear", mlpfile::LayerType::Linear)
+        .value("ReLU", mlpfile::LayerType::ReLU)
+        .export_values()
+    ;
+
     py::class_<mlpfile::Layer> (m, "Layer")
         .def(py::init<>())
         .def_readonly("type", &mlpfile::Layer::type, "Layer type enum.")
@@ -25,6 +32,8 @@ PYBIND11_MODULE(_mlpfile_bindings, m) {
         .def_static("load", &mlpfile::Model::load,
             "Load the model from a path.",
             py::arg("path"))
+        .def_static("random", &mlpfile::Model::random,
+            "Generate a randomly initialized model.")
         .def_readonly("layers", &mlpfile::Model::layers,
             "List of the Layer objects.")
         .def("input_dim", &mlpfile::Model::input_dim,

@@ -116,6 +116,29 @@ namespace mlpfile
 		return model;
 	}
 
+	// Generates a random NN with Xavier-uniform initialization. Mainly
+	// intended for unit test, etc, where the NN function doesn't matter.
+	Model Model::random(int input, std::vector<int> hidden, int output)
+	{
+		Model m;
+		m.layers.push_back(Layer{Input, input});
+		int size = input;
+		std::vector<int> widths = hidden;
+		widths.push_back(output);
+		for (int h : widths) {
+			Layer lay{Linear};
+			float glorot_scale = std::sqrt(6.0f / (size + h));
+			lay.W = glorot_scale * MatrixXfRow::Random(h, size);
+			lay.b = Eigen::VectorXf::Zero(h);
+			m.layers.push_back(lay);
+			m.layers.push_back(Layer{ReLU});
+			size = h;
+		}
+		// Remove the last ReLU.
+		m.layers.pop_back();
+		return m;
+	}
+
 	int Model::input_dim() const
 	{
 		assert (layers[0].type == Input);
