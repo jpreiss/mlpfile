@@ -53,3 +53,8 @@ def test_random():
     y = r.forward([0, 0])
     assert y.size == 5
     r.jacobian([0, 0])
+
+def test_cpp_dir(capfd):
+    mlpfile.cpp_dir()
+    out, _ = capfd.readouterr()
+    assert out.endswith("cpp")
