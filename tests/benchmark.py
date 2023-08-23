@@ -1,5 +1,6 @@
 import contextlib
 import os
+import tempfile
 import time
 
 import mlpfile
@@ -61,13 +62,6 @@ HIDDEN = [100] * 2
 NET = mlpfile.torch.mlp(INDIM, OUTDIM, HIDDEN)
 NET.eval()
 
-# Our format
-mlpfile.torch.write(NET, "Phi.mlp")
-net_ours = mlpfile.Model.load("Phi.mlp")
-print(net_ours)
-for layer in net_ours.layers:
-    print(layer)
-
 
 def _check_onnx_size(path):
     """Check size of ONNX's output file.
@@ -93,7 +87,7 @@ def _check_onnx_size(path):
     return True
 
 
-def compare_forward():
+def compare_forward(net_ours):
     path = "forward.onnx"
     # ONNX for forward pass
     input_name = "x"
@@ -135,7 +129,7 @@ def compare_forward():
         print(f"{name}: {us_per:7.2f} usec")
 
 
-def compare_jacobian():
+def compare_jacobian(net_ours):
     # Option 1: PyTorch's functional autodiff.
     with torch.no_grad():
         jac_autodiff = torch.func.jacrev(NET)
@@ -196,10 +190,19 @@ def _printbox(s):
 
 
 def main():
-    _printbox("Forward")
-    compare_forward()
-    _printbox("Jacobian")
-    compare_jacobian()
+    with tempfile.TemporaryDirectory() as testdir:
+        os.chdir(testdir)
+        # Our format
+        mlpfile.torch.write(NET, "Phi.mlp")
+        net_ours = mlpfile.Model.load("Phi.mlp")
+        print(net_ours)
+        for layer in net_ours.layers:
+            print(layer)
+
+        _printbox("Forward")
+        compare_forward(net_ours)
+        _printbox("Jacobian")
+        compare_jacobian(net_ours)
 
 
 if __name__ == "__main__":
