@@ -14,7 +14,14 @@ API docs: [https://jpreiss.github.io/mlpfile/api.html](https://jpreiss.github.io
 Installation
 ------------
 
-**TODO**: The `pip` package is almost ready.
+To use the Python export and/or bindings, install the
+[pip package](https://jpreiss.github.io/mlpfile/overview.html):
+
+```pip install mlpfile```
+
+If you only need to load and evaluate networks in C++, the easiest way is to
+either 1) copy the files from `mlpfile/cpp` into your project, or 2) include
+this repo as a submodule.
 
 
 Example code
