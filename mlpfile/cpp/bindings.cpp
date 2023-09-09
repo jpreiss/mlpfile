@@ -18,6 +18,8 @@ PYBIND11_MODULE(_mlpfile_bindings, m) {
     py::class_<mlpfile::Layer> (m, "Layer")
         .def(py::init<>())
         .def_readonly("type", &mlpfile::Layer::type, "Layer type enum.")
+        .def_readonly("W", &mlpfile::Layer::W, "Linear layer weight.")
+        .def_readonly("b", &mlpfile::Layer::b, "Linear layer bias.")
         .def("__str__", &mlpfile::Layer::describe)
         .doc() = "A single layer in an MLP. Limited functionality."
     ;
