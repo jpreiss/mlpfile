@@ -6,7 +6,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(_mlpfile_bindings, m) {
+PYBIND11_MODULE(_mlpfile, m) {
 
     py::enum_<mlpfile::LayerType>(m, "LayerType")
         .value("Input", mlpfile::LayerType::Input)

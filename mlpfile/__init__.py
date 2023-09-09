@@ -1,6 +1,6 @@
 """mlpfile: Multilayer perceptron file format and evaluation."""
 
-from _mlpfile_bindings import Model, Layer, LayerType
+from _mlpfile import Model, Layer, LayerType
 
 
 __all__ = ["Model", "Layer", "LayerType", "cpp_dir"]

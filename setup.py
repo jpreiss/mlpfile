@@ -6,7 +6,7 @@ from setuptools import setup
 __version__ = "0.1.0"
 
 ext_modules = [
-    Pybind11Extension("_mlpfile_bindings",
+    Pybind11Extension("_mlpfile",
         ["mlpfile/cpp/bindings.cpp", "mlpfile/cpp/mlpfile.cpp"],
         include_dirs = [eigenpip.get_include()],
         cxx_std=11,
