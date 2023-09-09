@@ -63,28 +63,27 @@ test. You can test on your own hardware by running `benchmark.py`.
 ```
 $ python benchmark.py
 
-mlpfile::Model with 6 Layers
-Input: 40
-Linear: 40 -> 100
-ReLU
-Linear: 100 -> 100
-ReLU
-Linear: 100 -> 10
-
-***********
-* Forward *
-***********
-torch:   23.79 usec
+┌─────────┐
+│ Forward │
+└─────────┘
+torch:   12.89 usec
  onnx:    6.67 usec
- ours:    1.95 usec
+ ours:    2.00 usec
 
-************
-* Jacobian *
-************
-torch-autodiff:  246.24 usec
-  torch-manual:   52.66 usec
-   onnx-python:   42.85 usec
-          ours:   11.61 usec
+┌──────────┐
+│ Jacobian │
+└──────────┘
+torch-autodiff:  123.36 usec
+  torch-manual:   43.94 usec
+          onnx:   46.98 usec
+          ours:   12.39 usec
+
+┌────────────┐
+│ OGD-update │
+└────────────┘
+torch:  117.98 usec
+ ours:   10.07 usec
+
 ```
 
 Motivation
