@@ -57,7 +57,7 @@ namespace mlpfile
 		uint32_t size = 0;
 
 		// Pass 1: Metadata
-		for (int i = 0; i < n_layers; ++i) {
+		for (uint32_t i = 0; i < n_layers; ++i) {
 			Layer &layer = model.layers[i];
 			layer.type = (LayerType)readu32();
 			if (i == 0 && layer.type != Input) {
@@ -91,7 +91,7 @@ namespace mlpfile
 		}
 
 		// Pass 2: Data
-		for (int i = 0; i < n_layers; ++i) {
+		for (uint32_t i = 0; i < n_layers; ++i) {
 			if (model.layers[i].type == Linear) {
 				Layer &layer = model.layers[i];
 				uint32_t total = layer.W.rows() * layer.W.cols();
@@ -100,7 +100,7 @@ namespace mlpfile
 					throw std::runtime_error("Not enough data in file.");
 				}
 				size_t rb = fread(&layer.b[0], sizeof(float), layer.W.rows(), fp);
-				if (rb != layer.W.rows()) {
+				if ((Eigen::Index)rb != layer.W.rows()) {
 					throw std::runtime_error("Not enough data in file.");
 				}
 			}
