@@ -1,5 +1,7 @@
+from copy import deepcopy
 import tempfile
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import torch
@@ -35,6 +37,7 @@ def test_forward(model):
         # TODO: Why do we need to loosen the tolerance?
         assert np.all(np.isclose(ytorch, y, atol=1e-6, rtol=1e-4))
 
+
 def test_jacobian(model):
     for i in range(100):
         x = torch.randn(INDIM, requires_grad=False)
@@ -42,6 +45,45 @@ def test_jacobian(model):
         Jtorch = JAC(x).detach().numpy()
         # TODO: Why do we need to loosen the tolerance?
         assert np.all(np.isclose(J.flat, Jtorch.flat, atol=1e-6, rtol=1e-4))
+
+
+def test_ogd_onepoint(model):
+    model = deepcopy(model)
+    rate = 1e-2
+    x = np.random.normal(size=INDIM)
+    ytrue = np.random.normal(size=OUTDIM)
+    # Full log makes debugging easier - plots, etc.
+    errs = []
+    for i in range(50):
+        y = model.forward(x);
+        errs.append(np.sum((y - ytrue) ** 2))
+        model.ogd_update_lstsq(x, ytrue, rate)
+    errs.append(np.sum((model.forward(x) - ytrue) ** 2))
+    # We should be able to fit perfectly using last layer's bias.
+    assert errs[-1] < 1e-8
+
+
+def test_ogd_multipoint(model):
+    model = deepcopy(model)
+    rate = 1e-2
+    # Overfit a few random data points.
+    # See "Understanding Deep Learning Requires Rethinking Generalization"
+    N = 20
+    xs = np.random.normal(size=(N, INDIM))
+    ys = np.random.normal(size=(N, OUTDIM))
+    # Full log makes debugging easier - plots, etc.
+    errs = []
+    for epoch in range(50):
+        for i in range(N):
+            y = model.forward(xs[i]);
+            model.ogd_update_lstsq(xs[i], ys[i], rate)
+        errs.append(np.mean([
+            np.sum((model.forward(x) - y) ** 2)
+            for x, y in zip(xs, ys)
+        ]))
+    assert errs[0] > 1
+    assert errs[-1] < 1e-2
+
 
 def test_random():
     r = mlpfile.Model.random(2, [3, 4], 5)
@@ -53,6 +95,7 @@ def test_random():
     y = r.forward([0, 0])
     assert y.size == 5
     r.jacobian([0, 0])
+
 
 def test_cpp_dir(capfd):
     mlpfile.cpp_dir()

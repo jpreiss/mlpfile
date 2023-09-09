@@ -1,4 +1,5 @@
 import contextlib
+from copy import deepcopy
 import os
 import tempfile
 import time
@@ -181,12 +182,44 @@ def compare_jacobian(net_ours):
         print(f"{name}: {us_per:7.2f} usec")
 
 
+def compare_ogd(net_ours):
+    # Evaluate with a different input to make sure the ReLU activations change.
+    xt = torch.randn(INDIM)
+    xn = xt.numpy()
+    yt = torch.randn(OUTDIM)
+    yn = yt.numpy()
+
+    rate = 1e-2
+
+    opt = torch.optim.SGD(NET.parameters(), lr=rate, momentum=0)
+    loss = torch.nn.MSELoss(reduction="sum")
+    def torch_ogd(x, y):
+        opt.zero_grad()
+        loss(NET.forward(x), y).backward()
+        opt.step()
+
+    def ours_ogd(x, y):
+        net_ours.ogd_update_lstsq(x, y, rate)
+
+    # Compare running time.
+    TRIALS = 1000
+    for f, x, y, name in [
+        (torch_ogd, xt, yt, "torch"),
+        (ours_ogd, xn, yn, " ours"),
+    ]:
+        t0 = time.time()
+        for _ in range(TRIALS):
+            _ = f(x, y)
+        us_per = 1000 * 1000 * (time.time() - t0) / TRIALS
+        print(f"{name}: {us_per:7.2f} usec")
+
+
 def _printbox(s):
-    n = len(s) + 4
+    n = len(s) + 2
     print()
-    print("*" * n)
-    print("*", s, "*")
-    print("*" * n)
+    print("┌" + ("─" * n) + "┐")
+    print("│", s, "│")
+    print("└" + ("─" * n) + "┘")
 
 
 def main():
@@ -195,14 +228,18 @@ def main():
         # Our format
         mlpfile.torch.write(NET, "Phi.mlp")
         net_ours = mlpfile.Model.load("Phi.mlp")
+
+        _printbox("Model structure")
         print(net_ours)
         for layer in net_ours.layers:
             print(layer)
-
         _printbox("Forward")
         compare_forward(net_ours)
         _printbox("Jacobian")
         compare_jacobian(net_ours)
+        _printbox("OGD-update")
+        compare_ogd(net_ours)
+        print()
 
 
 if __name__ == "__main__":

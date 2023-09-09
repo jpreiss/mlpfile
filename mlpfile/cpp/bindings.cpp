@@ -48,6 +48,9 @@ PYBIND11_MODULE(_mlpfile_bindings, m) {
         .def("jacobian", &mlpfile::Model::jacobian,
             "Computes the MLP's Jacobian.",
             py::arg("input"))
+        .def("ogd_update_lstsq", &mlpfile::Model::ogd_update_lstsq,
+            "Performs one step of online gradient descent for a least-squares loss.",
+            py::arg("input"), py::arg("target"), py::arg("rate"))
         .def("__str__", &mlpfile::Model::describe)
         .def("__copy__",  [](mlpfile::Model const &self) {
             return mlpfile::Model(self);

@@ -244,6 +244,60 @@ namespace mlpfile
 		return *J;
 	}
 
+	void Model::ogd_update_lstsq(Eigen::VectorXf x, Eigen::VectorXf y, float rate)
+	{
+		std::vector<Eigen::VectorXf> stack = { x };
+
+		// Forward pass. TODO: Deduplicate copy-paste.
+		for (Layer const &layer : layers) {
+			if (layer.type == mlpfile::Input) {
+				if (layer.input_size != x.rows()) {
+					throw std::runtime_error("incorrect input size");
+				}
+			}
+			else if (layer.type == mlpfile::Linear) {
+				stack.push_back(layer.W * stack.back() + layer.b);
+			}
+			else if (layer.type == mlpfile::ReLU) {
+				stack.push_back(stack.back().array().max(0));
+			}
+			else {
+				throw std::runtime_error("unrecognized type");
+			}
+		}
+
+		Eigen::VectorXf grad = stack.back() - y;
+
+		// Backward pass
+		for (int i = (int)layers.size() - 1; i >= 0; --i) {
+			stack.pop_back();
+
+			if (layers[i].type == mlpfile::ReLU) {
+				// Eigen doesn't have logical indexing.
+				grad = (stack.back().array() > 0.0f).select(grad, 0.0f);
+				assert (grad.rows() == stack.back().rows());
+			}
+			else if (layers[i].type == mlpfile::Linear) {
+				Eigen::VectorXf backprop_grad = grad.transpose() * layers[i].W;
+				assert (backprop_grad.rows() == W.columns());
+				// OGD inplace
+				auto expr = (rate * grad) * stack.back().transpose();
+				assert (expr.rows() == layers[i].W.rows());
+				assert (expr.columns() == layers[i].W.columns());
+				layers[i].W = layers[i].W - expr;
+				layers[i].b = layers[i].b - (rate * grad);
+				grad = backprop_grad;
+			}
+			else if (layers[i].type == mlpfile::Input) {
+				// TODO: validate size
+			}
+			else {
+				throw std::runtime_error("unrecognized type");
+			}
+		}
+		assert (stack.size() == 0);
+	}
+
 	std::string Model::describe() const
 	{
 		return "mlpfile::Model with " + std::to_string(layers.size()) + " Layers";
