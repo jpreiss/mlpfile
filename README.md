@@ -5,11 +5,13 @@ Features:
 - Create the files in Python from a `torch.nn.Sequential`.
 - Load the files in C++, or in Python via bindings.
 - Evaluate the network and/or its Jacobian on an input.
+- Perform a step of gradient descent for squared error loss.*
 - C++ interface uses Eigen types.
 - Binary file I/O (no C++ dependency on Protobuf, etc.)
 
 API docs: [https://jpreiss.github.io/mlpfile/api.html](https://jpreiss.github.io/mlpfile/api.html)
 
+[*] OGD update is in-place, for one datapoint only, no momentum.
 
 Installation
 ------------
