@@ -1,0 +1,10 @@
+eigenpip
+numpy
+onnx
+onnxruntime
+pybind11
+pytest
+setuptools
+six
+torch
+wheel
