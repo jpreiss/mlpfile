@@ -50,7 +50,7 @@ PYBIND11_MODULE(_mlpfile, m) {
             py::arg("input"))
         .def("ogd_update_lstsq", &mlpfile::Model::ogd_update_lstsq,
             "Performs one step of online gradient descent for a least-squares loss.",
-            py::arg("input"), py::arg("target"), py::arg("rate"))
+            py::arg("x"), py::arg("y"), py::arg("rate"))
         .def("__str__", &mlpfile::Model::describe)
         .def("__copy__",  [](mlpfile::Model const &self) {
             return mlpfile::Model(self);

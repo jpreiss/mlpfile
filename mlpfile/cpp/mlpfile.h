@@ -54,8 +54,10 @@ namespace mlpfile
 		// implement forward-mode too if needed, for the opposite case.
 		MatrixXfRow jacobian(Eigen::VectorXf const &x);
 
-		// Update the parameters in-place for a single step of online gradient
-		// descent w.r.t. a single input-output pair.
+		// Does a step of gradient descent for regression loss on one point.
+		//
+		// Updates the parameters in-place for a step of gradient descent on
+		// the regression loss `1/2 || model.forward(x) - y ||_2^2`.
 		void ogd_update_lstsq(Eigen::VectorXf x, Eigen::VectorXf y, float rate);
 
 		// Pretty-prints a description of the network architecture.

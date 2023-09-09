@@ -18,6 +18,10 @@ NET.eval()
 JAC = torch.func.jacrev(NET)
 
 
+def norm2(x):
+    return np.sum(x ** 2)
+
+
 # The point of this is to make sure we write the file exactly once and then
 # clean up after all tests are complete. See the pytest "How to use fixtures"
 # docs for more info.
@@ -54,13 +58,45 @@ def test_ogd_onepoint(model):
     ytrue = np.random.normal(size=OUTDIM)
     # Full log makes debugging easier - plots, etc.
     errs = []
-    for i in range(50):
+    for i in range(100):
         y = model.forward(x);
-        errs.append(np.sum((y - ytrue) ** 2))
+        errs.append(norm2(y - ytrue))
         model.ogd_update_lstsq(x, ytrue, rate)
-    errs.append(np.sum((model.forward(x) - ytrue) ** 2))
+    errs.append(norm2(model.forward(x) - ytrue))
     # We should be able to fit perfectly using last layer's bias.
     assert errs[-1] < 1e-8
+
+
+def test_ogd_finitediff(model):
+    x = np.random.normal(size=INDIM)
+    y = np.random.normal(size=OUTDIM)
+    # Accounting for the 1/2 is important!
+    loss_original = 0.5 * norm2(model.forward(x) - y)
+
+    rate = 1e-3
+    model2 = deepcopy(model)
+    model2.ogd_update_lstsq(x, y, rate)
+
+    # Reverse engineer what the gradient was.
+    layers = model.layers
+    grad_dot_step = 0.0
+    for i in range(len(layers)):
+        if layers[i].type == mlpfile.LayerType.Linear:
+            gradW = (model2.layers[i].W - model.layers[i].W) / rate
+            grad_dot_step -= rate * norm2(gradW.flatten())
+            gradb = (model2.layers[i].b - model.layers[i].b) / rate
+            grad_dot_step -= rate * norm2(gradb)
+
+    # Predict what the new loss should be using first-order approximation.
+    loss_predicted = loss_original + grad_dot_step
+    assert loss_predicted < loss_original
+    loss_actual = 0.5 * norm2(model2.forward(x) - y)
+    print(
+        f"original: {loss_original}, "
+        f"predicted: {loss_predicted}, "
+        f"actual: {loss_actual}"
+    )
+    assert np.abs(loss_predicted - loss_actual) / loss_original < 1e-3
 
 
 def test_ogd_multipoint(model):
@@ -78,7 +114,7 @@ def test_ogd_multipoint(model):
             y = model.forward(xs[i]);
             model.ogd_update_lstsq(xs[i], ys[i], rate)
         errs.append(np.mean([
-            np.sum((model.forward(x) - y) ** 2)
+            norm2(model.forward(x) - y)
             for x, y in zip(xs, ys)
         ]))
     assert errs[0] > 1
