@@ -49,5 +49,11 @@ PYBIND11_MODULE(_mlpfile_bindings, m) {
             "Computes the MLP's Jacobian.",
             py::arg("input"))
         .def("__str__", &mlpfile::Model::describe)
+        .def("__copy__",  [](mlpfile::Model const &self) {
+            return mlpfile::Model(self);
+        })
+        .def("__deepcopy__", [](mlpfile::Model const &self, py::dict) {
+            return mlpfile::Model(self);
+        }, "memo")
         .doc() = "Main class for loaded MLP models.";
 }
