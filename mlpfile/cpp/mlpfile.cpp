@@ -279,11 +279,11 @@ namespace mlpfile
 			}
 			else if (layers[i].type == mlpfile::Linear) {
 				Eigen::VectorXf backprop_grad = grad.transpose() * layers[i].W;
-				assert (backprop_grad.rows() == W.columns());
+				assert (backprop_grad.rows() == layers[i].W.cols());
 				// OGD inplace
 				auto expr = (rate * grad) * stack.back().transpose();
 				assert (expr.rows() == layers[i].W.rows());
-				assert (expr.columns() == layers[i].W.columns());
+				assert (expr.cols() == layers[i].W.cols());
 				layers[i].W = layers[i].W - expr;
 				layers[i].b = layers[i].b - (rate * grad);
 				grad = backprop_grad;
