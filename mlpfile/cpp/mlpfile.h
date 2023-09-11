@@ -29,15 +29,17 @@ namespace mlpfile
 		std::string describe() const;
 	};
 
-	enum Loss
+	Eigen::VectorXf squared_error(Eigen::VectorXf y, Eigen::VectorXf target)
 	{
-		// The regression loss `1/2 || model.forward(x) - y ||_2^2`.
-		SquaredError,
-		// The classification loss `cross_entropy(y, softmax(model.forward(x)))`,
-		// where softmax(v) = exp(v) / sum(exp(v)) elementwise,
-		// and cross_entropy(p, q) = -sum(p log(q)) elementwise.
-		SoftmaxCrossEntropy,
-	};
+		return y - target;
+	}
+
+	Eigen::VectorXf softmax_cross_entropy(Eigen::VectorXf y, Eigen::VectorXf target)
+	{
+		auto e = y.array().exp();
+		auto softmax = e / e.sum();
+		return softmax.matrix() - y;
+	}
 
 	struct Model
 	{
