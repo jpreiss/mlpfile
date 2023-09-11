@@ -254,11 +254,25 @@ namespace mlpfile
 		return *J;
 	}
 
-	void Model::ogd_update_lstsq(Eigen::VectorXf x, Eigen::VectorXf y, float rate)
+	void Model::grad_update(Eigen::VectorXf x, Eigen::VectorXf y, Loss loss, float rate)
 	{
 		std::vector<Eigen::VectorXf> stack = fwdpass_stack(*this, x);
 
-		Eigen::VectorXf grad = stack.back() - y;
+		Eigen::VectorXf grad;
+		switch (loss) {
+		case Loss::SquaredError:
+			grad = stack.back() - y;
+			break;
+		case Loss::SoftmaxCrossEntropy: {
+				auto e = stack.back().array().exp();
+				auto softmax = e / e.sum();
+				grad = softmax.matrix() - y;
+				break;
+			}
+		default:
+			throw std::runtime_error("Unrecognized loss function.");
+			break;
+		}
 
 		// Backward pass
 		for (int i = (int)layers.size() - 1; i >= 0; --i) {

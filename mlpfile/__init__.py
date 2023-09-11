@@ -1,9 +1,9 @@
 """mlpfile: Multilayer perceptron file format and evaluation."""
 
-from _mlpfile import Model, Layer, LayerType
+from _mlpfile import Model, Layer, LayerType, Loss
 
 
-__all__ = ["Model", "Layer", "LayerType", "cpp_dir"]
+__all__ = ["Model", "Layer", "LayerType", "Loss", "cpp_dir"]
 
 
 def cpp_dir():

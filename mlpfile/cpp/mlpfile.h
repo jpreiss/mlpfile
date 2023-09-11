@@ -29,6 +29,16 @@ namespace mlpfile
 		std::string describe() const;
 	};
 
+	enum Loss
+	{
+		// The regression loss `1/2 || model.forward(x) - y ||_2^2`.
+		SquaredError,
+		// The classification loss `cross_entropy(y, softmax(model.forward(x)))`,
+		// where softmax(v) = exp(v) / sum(exp(v)) elementwise,
+		// and cross_entropy(p, q) = -sum(p log(q)) elementwise.
+		SoftmaxCrossEntropy,
+	};
+
 	struct Model
 	{
 		std::vector<Layer> layers;
@@ -57,8 +67,8 @@ namespace mlpfile
 		// Does a step of gradient descent for regression loss on one point.
 		//
 		// Updates the parameters in-place for a step of gradient descent on
-		// the regression loss `1/2 || model.forward(x) - y ||_2^2`.
-		void ogd_update_lstsq(Eigen::VectorXf x, Eigen::VectorXf y, float rate);
+		// one of the loss functions from the Loss enum.
+		void grad_update(Eigen::VectorXf x, Eigen::VectorXf y, Loss loss, float rate);
 
 		// Pretty-prints a description of the network architecture.
 		std::string describe() const;

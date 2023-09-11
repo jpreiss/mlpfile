@@ -15,6 +15,12 @@ PYBIND11_MODULE(_mlpfile, m) {
         .export_values()
     ;
 
+    py::enum_<mlpfile::Loss>(m, "Loss")
+        .value("SquaredError", mlpfile::Loss::SquaredError)
+        .value("SoftmaxCrossEntropy", mlpfile::Loss::SoftmaxCrossEntropy)
+        .export_values()
+    ;
+
     py::class_<mlpfile::Layer> (m, "Layer")
         .def(py::init<>())
         .def_readonly("type", &mlpfile::Layer::type, "Layer type enum.")
@@ -48,9 +54,9 @@ PYBIND11_MODULE(_mlpfile, m) {
         .def("jacobian", &mlpfile::Model::jacobian,
             "Computes the MLP's Jacobian.",
             py::arg("input"))
-        .def("ogd_update_lstsq", &mlpfile::Model::ogd_update_lstsq,
-            "Performs one step of online gradient descent for a least-squares loss.",
-            py::arg("x"), py::arg("y"), py::arg("rate"))
+        .def("grad_update", &mlpfile::Model::grad_update,
+            "Performs one step of gradient descent for one data point.",
+            py::arg("x"), py::arg("y"), py::arg("loss"), py::arg("rate"))
         .def("__str__", &mlpfile::Model::describe)
         .def("__copy__",  [](mlpfile::Model const &self) {
             return mlpfile::Model(self);
