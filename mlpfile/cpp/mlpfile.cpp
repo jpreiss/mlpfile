@@ -3,6 +3,34 @@
 
 #include "mlpfile.h"
 
+
+static std::vector<Eigen::VectorXf> fwdpass_stack(
+	mlpfile::Model &m, Eigen::VectorXf x)
+{
+	std::vector<Eigen::VectorXf> stack = { x };
+
+	// Forward pass. TODO: Deduplicate copy-paste.
+	for (mlpfile::Layer const &layer : m.layers) {
+		if (layer.type == mlpfile::Input) {
+			if (layer.input_size != x.rows()) {
+				throw std::runtime_error("incorrect input size");
+			}
+		}
+		else if (layer.type == mlpfile::Linear) {
+			stack.push_back(layer.W * stack.back() + layer.b);
+		}
+		else if (layer.type == mlpfile::ReLU) {
+			stack.push_back(stack.back().array().max(0));
+		}
+		else {
+			throw std::runtime_error("unrecognized type");
+		}
+	}
+
+	return stack;
+}
+
+
 namespace mlpfile
 {
 	static std::string const layer_type_names[] = {
@@ -189,25 +217,7 @@ namespace mlpfile
 	{
 		std::unique_ptr<MatrixXfRow> J;
 
-		std::vector<Eigen::VectorXf> stack = { x };
-
-		// Forward pass
-		for (Layer const &layer : layers) {
-			if (layer.type == mlpfile::Input) {
-				if (layer.input_size != x.rows()) {
-					throw std::runtime_error("incorrect input size");
-				}
-			}
-			else if (layer.type == mlpfile::Linear) {
-				stack.push_back(layer.W * stack.back() + layer.b);
-			}
-			else if (layer.type == mlpfile::ReLU) {
-				stack.push_back(stack.back().array().max(0));
-			}
-			else {
-				throw std::runtime_error("unrecognized type");
-			}
-		}
+		std::vector<Eigen::VectorXf> stack = fwdpass_stack(*this, x);
 
 		// Backward pass
 		for (int i = (int)layers.size() - 1; i >= 0; --i) {
@@ -246,25 +256,7 @@ namespace mlpfile
 
 	void Model::ogd_update_lstsq(Eigen::VectorXf x, Eigen::VectorXf y, float rate)
 	{
-		std::vector<Eigen::VectorXf> stack = { x };
-
-		// Forward pass. TODO: Deduplicate copy-paste.
-		for (Layer const &layer : layers) {
-			if (layer.type == mlpfile::Input) {
-				if (layer.input_size != x.rows()) {
-					throw std::runtime_error("incorrect input size");
-				}
-			}
-			else if (layer.type == mlpfile::Linear) {
-				stack.push_back(layer.W * stack.back() + layer.b);
-			}
-			else if (layer.type == mlpfile::ReLU) {
-				stack.push_back(stack.back().array().max(0));
-			}
-			else {
-				throw std::runtime_error("unrecognized type");
-			}
-		}
+		std::vector<Eigen::VectorXf> stack = fwdpass_stack(*this, x);
 
 		Eigen::VectorXf grad = stack.back() - y;
 
