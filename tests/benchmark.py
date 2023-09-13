@@ -111,6 +111,11 @@ def compare_forward(net_ours):
     def fwd_onnx(x):
         return session.run(None, {input_name: x})[0]
 
+    net_codegen = mlpfile.ModelCodegen(net_ours)
+    ydst = np.zeros(OUTDIM, dtype=np.float32)
+    def fwd_codegen(x):
+        net_codegen.forward(x, ydst)
+
     # Evaluate with a different input to make sure the ReLU activations change.
     x2 = torch.randn(INDIM)
     x2n = x2.numpy()
@@ -118,9 +123,10 @@ def compare_forward(net_ours):
     # Compare running time.
     TRIALS = 10000
     for f, x, name in [
-        (NET.forward, x2, "torch"),
-        (fwd_onnx, x2n, " onnx"),
-        (net_ours.forward, x2n, " ours"),
+        (NET.forward,       x2, "  torch"),
+        (fwd_onnx,         x2n, "   onnx"),
+        (net_ours.forward, x2n, "   ours"),
+        (fwd_codegen,      x2n, "codegen"),
     ]:
         t0 = time.time()
         with torch.inference_mode():
@@ -128,6 +134,9 @@ def compare_forward(net_ours):
                 _ = f(x)
         us_per = 1000 * 1000 * (time.time() - t0) / TRIALS
         print(f"{name}: {us_per:7.2f} usec")
+
+    # TODO: Why is codegen so much slower than ours? It's even slower than ONNX
+    # on my M1 macbook. Are we failing to use SIMD instructions, maybe?
 
 
 def compare_jacobian(net_ours):

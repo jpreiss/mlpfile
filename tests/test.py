@@ -136,3 +136,12 @@ def test_cpp_dir(capfd):
     mlpfile.cpp_dir()
     out, _ = capfd.readouterr()
     assert out.endswith("cpp")
+
+
+def test_codegen(model):
+    model_codegen = mlpfile.ModelCodegen(model)
+    x = np.random.normal(size=INDIM).astype(np.float32)
+    y = np.zeros(OUTDIM, dtype=np.float32)
+    model_codegen.forward(x, y)
+    y2 = model.forward(x)
+    assert np.allclose(y, y2)
