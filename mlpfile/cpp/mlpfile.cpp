@@ -258,21 +258,7 @@ namespace mlpfile
 	{
 		std::vector<Eigen::VectorXf> stack = fwdpass_stack(*this, x);
 
-		Eigen::VectorXf grad;
-		switch (loss) {
-		case Loss::SquaredError:
-			grad = stack.back() - y;
-			break;
-		case Loss::SoftmaxCrossEntropy: {
-				auto e = stack.back().array().exp();
-				auto softmax = e / e.sum();
-				grad = softmax.matrix() - y;
-				break;
-			}
-		default:
-			throw std::runtime_error("Unrecognized loss function.");
-			break;
-		}
+		Eigen::VectorXf grad = loss(stack.back(), y);
 
 		// Backward pass
 		for (int i = (int)layers.size() - 1; i >= 0; --i) {
@@ -307,6 +293,18 @@ namespace mlpfile
 	std::string Model::describe() const
 	{
 		return "mlpfile::Model with " + std::to_string(layers.size()) + " Layers";
+	}
+
+	Eigen::VectorXf squared_error(Eigen::VectorXf y, Eigen::VectorXf target)
+	{
+		return y - target;
+	}
+
+	Eigen::VectorXf softmax_cross_entropy(Eigen::VectorXf y, Eigen::VectorXf target)
+	{
+		auto e = y.array().exp();
+		auto softmax = e / e.sum();
+		return softmax.matrix() - target;
 	}
 
 }  // namespace mlpfile

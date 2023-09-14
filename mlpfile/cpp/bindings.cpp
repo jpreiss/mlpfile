@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 #include <pybind11/eigen.h>
+#include <pybind11/functional.h>
+#include <pybind11/stl.h>
 
 #include "mlpfile.h"
 
@@ -12,12 +13,6 @@ PYBIND11_MODULE(_mlpfile, m) {
         .value("Input", mlpfile::LayerType::Input)
         .value("Linear", mlpfile::LayerType::Linear)
         .value("ReLU", mlpfile::LayerType::ReLU)
-        .export_values()
-    ;
-
-    py::enum_<mlpfile::Loss>(m, "Loss")
-        .value("SquaredError", mlpfile::Loss::SquaredError)
-        .value("SoftmaxCrossEntropy", mlpfile::Loss::SoftmaxCrossEntropy)
         .export_values()
     ;
 
@@ -65,4 +60,7 @@ PYBIND11_MODULE(_mlpfile, m) {
             return mlpfile::Model(self);
         }, "memo")
         .doc() = "Main class for loaded MLP models.";
+
+    m.def("squared_error", &mlpfile::squared_error);
+    m.def("softmax_cross_entropy", &mlpfile::softmax_cross_entropy);
 }

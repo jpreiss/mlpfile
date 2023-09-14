@@ -29,17 +29,12 @@ namespace mlpfile
 		std::string describe() const;
 	};
 
-	Eigen::VectorXf squared_error(Eigen::VectorXf y, Eigen::VectorXf target)
-	{
-		return y - target;
-	}
+	// Args: Estimate, target. Returns: Gradient of loss w.r.t. estimate.
+	using Loss = std::function<Eigen::VectorXf(Eigen::VectorXf, Eigen::VectorXf)>;
 
-	Eigen::VectorXf softmax_cross_entropy(Eigen::VectorXf y, Eigen::VectorXf target)
-	{
-		auto e = y.array().exp();
-		auto softmax = e / e.sum();
-		return softmax.matrix() - y;
-	}
+	Eigen::VectorXf squared_error(Eigen::VectorXf y, Eigen::VectorXf target);
+
+	Eigen::VectorXf softmax_cross_entropy(Eigen::VectorXf y, Eigen::VectorXf target);
 
 	struct Model
 	{
@@ -68,8 +63,10 @@ namespace mlpfile
 
 		// Does a step of gradient descent for regression loss on one point.
 		//
-		// Updates the parameters in-place for a step of gradient descent on
-		// one of the loss functions from the Loss enum.
+		// Updates the parameters in-place for a step of gradient descent. From
+		// Python, loss can be either a C++ function matching the `Loss` type
+		// alias above (such as `squared_error`) or a Python function with the
+		// equivalent NumPy signature.
 		void grad_update(Eigen::VectorXf x, Eigen::VectorXf y, Loss loss, float rate);
 
 		// Pretty-prints a description of the network architecture.

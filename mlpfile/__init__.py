@@ -1,9 +1,13 @@
 """mlpfile: Multilayer perceptron file format and evaluation."""
 
-from _mlpfile import Model, Layer, LayerType, Loss
+from _mlpfile import *
 
 
-__all__ = ["Model", "Layer", "LayerType", "Loss", "cpp_dir"]
+__all__ = [
+    "Model", "Layer", "LayerType", # Bound class/enum.
+    "squared_error", "softmax_cross_entropy", # Bound function.
+    "cpp_dir", # Pure Python.
+]
 
 
 def cpp_dir():

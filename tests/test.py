@@ -58,25 +58,31 @@ def test_jacobian(model):
 class GradCaseSqErr:
     def __init__(self):
         self.ytrue = np.random.normal(size=OUTDIM)
-        self.enum = mlpfile.Loss.SquaredError
+        self.lossgrad = mlpfile.squared_error
         self.rate = 1e-3
 
     def loss(self, y):
         # Accounting for the 1/2 is important!
         return 0.5 * norm2(self.ytrue - y)
 
+    def opt_loss(self):
+        return 0.0
+
 
 class GradCaseXEnt:
     def __init__(self):
         self.ytrue = random_simplex(OUTDIM)
         # Higher rate for x-entropy, otherwise the step is very small.
-        self.enum = mlpfile.Loss.SoftmaxCrossEntropy
+        self.lossgrad = mlpfile.softmax_cross_entropy
         self.rate = 5e-2
 
     def loss(self, y):
         s = np.exp(y)
         s /= np.sum(s)
         return -np.sum(self.ytrue * np.log(s))
+
+    def opt_loss(self):
+        return -np.sum(np.log(self.ytrue) * self.ytrue)
 
 GRAD_CASES = [GradCaseSqErr(), GradCaseXEnt()]
 
@@ -87,13 +93,13 @@ def test_ogd_onepoint(model, gradcase):
     x = np.random.normal(size=INDIM)
     # Full log makes debugging easier - plots, etc.
     errs = []
-    for i in range(100):
+    for i in range(1000):
         y = model.forward(x);
         errs.append(gradcase.loss(y))
-        model.grad_update(x, gradcase.ytrue, gradcase.enum, gradcase.rate)
+        model.grad_update(x, gradcase.ytrue, gradcase.lossgrad, gradcase.rate)
     errs.append(gradcase.loss(model.forward(x)))
     # We should be able to fit perfectly using last layer's bias.
-    assert errs[-1] < 1e-8
+    assert errs[-1] < gradcase.opt_loss() + 1e-6
 
 
 @pytest.mark.parametrize("gradcase", GRAD_CASES)
@@ -102,7 +108,7 @@ def test_ogd_finitediff(model, gradcase):
     loss_original = gradcase.loss(model.forward(x))
 
     model2 = deepcopy(model)
-    model2.grad_update(x, gradcase.ytrue, gradcase.enum, gradcase.rate)
+    model2.grad_update(x, gradcase.ytrue, gradcase.lossgrad, gradcase.rate)
 
     # Reverse engineer what the gradient was.
     layers = model.layers
@@ -119,7 +125,7 @@ def test_ogd_finitediff(model, gradcase):
     assert loss_predicted < loss_original
     loss_actual = gradcase.loss(model2.forward(x))
     print(
-        f"loss {gradcase.enum}:\n"
+        f"loss {gradcase.lossgrad}:\n"
         f"original: {loss_original}, "
         f"predicted: {loss_predicted}, "
         f"actual: {loss_actual}"
@@ -140,7 +146,7 @@ def test_ogd_multipoint(model):
     for epoch in range(50):
         for i in range(N):
             y = model.forward(xs[i]);
-            model.grad_update(xs[i], ys[i], mlpfile.Loss.SquaredError, rate)
+            model.grad_update(xs[i], ys[i], mlpfile.squared_error, rate)
         errs.append(np.mean([
             norm2(model.forward(x) - y)
             for x, y in zip(xs, ys)
