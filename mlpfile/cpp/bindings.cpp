@@ -10,7 +10,6 @@ namespace py = pybind11;
 PYBIND11_MODULE(_mlpfile, m) {
 
     py::enum_<mlpfile::LayerType>(m, "LayerType")
-        .value("Input", mlpfile::LayerType::Input)
         .value("Linear", mlpfile::LayerType::Linear)
         .value("ReLU", mlpfile::LayerType::ReLU)
         .export_values()

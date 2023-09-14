@@ -37,9 +37,7 @@ for (int i = 0; i < {size}; ++i) {{
     src = 0
     dst = 1
     for ilayer, layer in enumerate(model.layers):
-        if layer.type == LayerType.Input:
-            continue
-        elif layer.type == LayerType.Linear:
+        if layer.type == LayerType.Linear:
             newsize = layer.W.shape[0]
             f.write(
 f"""
@@ -109,9 +107,7 @@ def codegen_eigen(model, f):
     src = 0
     dst = 1
     for ilayer, layer in enumerate(model.layers):
-        if layer.type == LayerType.Input:
-            continue
-        elif layer.type == LayerType.Linear:
+        if layer.type == LayerType.Linear:
             newsize = layer.W.shape[0]
             f.write(f"work[{dst}].head<{newsize}>() = W_{ilayer} * work[{src}].head<{size}>() + b_{ilayer};\n")
             size = newsize

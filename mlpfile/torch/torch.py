@@ -40,26 +40,30 @@ def write(model: torch.nn.Sequential, path):
             <https://docs.python.org/3/glossary.html#term-path-like-object>`_
             where the file should be written.
     """
-    INPUT = 1
     LINEAR = 2
     RELU = 3
     with open(path, "wb") as f:
         def u32(i):
             f.write(i.to_bytes(4, byteorder="little", signed=False))
-        u32(len(model) + 1)  # extra one for the input layer
+        u32(len(model))
+
+        # First pass - get input size.
         size = 0
-        # First pass - metadata.
         for m in model:
             if isinstance(m, torch.nn.Linear):
+                size = m.weight.shape[1]
+                break
+        if size == 0:
+            raise ValueError("Cannot deduce input size.")
+        u32(size)
+
+        # Second pass - metadata.
+        for m in model:
+            if isinstance(m, torch.nn.Linear):
+                assert size != 0
                 osize, isize = m.weight.shape
                 assert osize != 0
-                if size == 0:
-                    u32(INPUT)
-                    u32(isize)
-                    size = isize
-                else:
-                    assert isize == size
-                assert size != 0
+                assert isize == size
                 u32(LINEAR)
                 u32(osize)
                 size = osize
@@ -67,7 +71,8 @@ def write(model: torch.nn.Sequential, path):
                 u32(RELU)
             else:
                 raise ValueError
-        # Second pass - weight data.
+
+        # Third pass - weight data.
         # TODO: We should enforce little-endian explicitly, here + the loader.
         for m in model:
             if isinstance(m, torch.nn.Linear):
