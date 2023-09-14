@@ -12,7 +12,6 @@ namespace mlpfile
 {
 	enum LayerType
 	{
-		Input = 1,
 		Linear = 2,
 		ReLU = 3,
 	};
@@ -23,7 +22,6 @@ namespace mlpfile
 	{
 		// TODO: use std::variant?
 		LayerType type;
-		int input_size;
 		MatrixXfRow W;
 		Eigen::VectorXf b;
 
@@ -42,6 +40,7 @@ namespace mlpfile
 	struct Model
 	{
 		std::vector<Layer> layers;
+		int _input_dim;
 
 		// Reads a model from our file format (see block comment at top of file).
 		static Model load(char const *path);
@@ -50,9 +49,8 @@ namespace mlpfile
 		// intended for unit test, etc, where the NN function doesn't matter.
 		static Model random(int input, std::vector<int> hidden, int output);
 
-		int input_dim() const;
-
 		int output_dim() const;
+		int input_dim() const;
 
 		// Computes the forward pass of the neural network.
 		Eigen::VectorXf forward(Eigen::VectorXf x);

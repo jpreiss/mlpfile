@@ -190,11 +190,11 @@ def test_ogd_multipoint(model):
 
 def test_random():
     r = mlpfile.Model.random(2, [3, 4], 5)
-    assert len(r.layers) == 6
+    assert len(r.layers) == 5
     types = [lay.type for lay in r.layers]
     linear = mlpfile.LayerType.Linear
     relu = mlpfile.LayerType.ReLU
-    assert types == [mlpfile.LayerType.Input, linear, relu, linear, relu, linear]
+    assert types == [linear, relu, linear, relu, linear]
     y = r.forward([0, 0])
     assert y.size == 5
     r.jacobian([0, 0])

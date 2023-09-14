@@ -125,17 +125,15 @@ The file format is not stable!
 
 ```text
 layer types enum:
-    1 - input
     2 - linear
     3 - relu
 
 header:
     number of layers (uint32)
+    input dimension (uint32)
 
     for each layer:
         enum layer type (uint32)
-        if input:
-            input dim (uint32)
         if linear:
             output dim (uint32)
         if relu:
