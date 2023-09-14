@@ -8,15 +8,13 @@ static std::vector<Eigen::VectorXf> fwdpass_stack(
 	mlpfile::Model &m, Eigen::VectorXf x)
 {
 	std::vector<Eigen::VectorXf> stack = { x };
+	if (x.rows() != m.input_dim) {
+		throw std::runtime_error("incorrect input size");
+	}
 
 	// Forward pass. TODO: Deduplicate copy-paste.
 	for (mlpfile::Layer const &layer : m.layers) {
-		if (layer.type == mlpfile::Input) {
-			if (layer.input_size != x.rows()) {
-				throw std::runtime_error("incorrect input size");
-			}
-		}
-		else if (layer.type == mlpfile::Linear) {
+		if (layer.type == mlpfile::Linear) {
 			stack.push_back(layer.W * stack.back() + layer.b);
 		}
 		else if (layer.type == mlpfile::ReLU) {
@@ -35,7 +33,7 @@ namespace mlpfile
 {
 	static std::string const layer_type_names[] = {
 		"Reserved",
-		"Input",
+		"Reserved",
 		"Linear",
 		"ReLU",
 	};
@@ -44,9 +42,6 @@ namespace mlpfile
 	{
 		std::string s = layer_type_names[type];
 		switch (type) {
-		case mlpfile::Input:
-			s += ": " + std::to_string(input_size);
-			break;
 		case mlpfile::Linear:
 			s += ": " + std::to_string(W.cols())
 				+ " -> " + std::to_string(W.rows());
@@ -82,29 +77,14 @@ namespace mlpfile
 		}
 		model.layers.resize(n_layers);
 
-		uint32_t size = 0;
+		uint32_t size = readu32();
+		model.input_dim = size;
 
 		// Pass 1: Metadata
 		for (uint32_t i = 0; i < n_layers; ++i) {
 			Layer &layer = model.layers[i];
 			layer.type = (LayerType)readu32();
-			if (i == 0 && layer.type != Input) {
-				throw std::runtime_error("First layer should be input.");
-			}
-			if (layer.type == Input) {
-				if (i != 0) {
-					throw std::runtime_error("Input layer appeared in wrong place.");
-				}
-				size = readu32();
-				if (size == 0) {
-					throw std::runtime_error("Input size 0 is not valid.");
-				}
-				layer.input_size = size;
-			}
-			else if (layer.type == Linear) {
-				if (size == 0) {
-					throw std::runtime_error("Linear layer appeared before Input.");
-				}
+			if (layer.type == Linear) {
 				uint32_t next_size = readu32();
 				if (next_size == 0) {
 					throw std::runtime_error("Linear layer output size 0 is not valid.");
@@ -149,7 +129,7 @@ namespace mlpfile
 	Model Model::random(int input, std::vector<int> hidden, int output)
 	{
 		Model m;
-		m.layers.push_back(Layer{Input, input});
+		m.input_dim = input;
 		int size = input;
 		std::vector<int> widths = hidden;
 		widths.push_back(output);
@@ -167,40 +147,26 @@ namespace mlpfile
 		return m;
 	}
 
-	int Model::input_dim() const
-	{
-		assert (layers[0].type == Input);
-		return layers[0].input_size;
-	}
-
 	int Model::output_dim() const
 	{
 		for (int i = layers.size() - 1; i >= 0; --i) {
 			Layer const &layer = layers[i];
-			switch (layer.type) {
-			case Input:
-				// Degenerate case, empty model, but allowed.
-				return layer.input_size;
-			case Linear:
-				// Typical case.
+			if (layer.type == Linear) {
 				return layer.b.rows();
-			case ReLU:
-				// Model ends in ReLU, not typical, but allowed.
-				break;
 			}
 		}
-		assert (false);
+		// Empty or all-ReLU model: Degenerate case, but allowed.
+		return input_dim;
 	}
 
 	Eigen::VectorXf Model::forward(Eigen::VectorXf x)
 	{
+		if (x.rows() != input_dim) {
+			throw std::runtime_error("incorrect input size");
+		}
+
 		for (Layer const &layer : layers) {
-			if (layer.type == mlpfile::Input) {
-				if (layer.input_size != x.rows()) {
-					throw std::runtime_error("incorrect input size");
-				}
-			}
-			else if (layer.type == mlpfile::Linear) {
+			if (layer.type == mlpfile::Linear) {
 				x = layer.W * x + layer.b;
 			}
 			else if (layer.type == mlpfile::ReLU) {
@@ -242,15 +208,13 @@ namespace mlpfile
 					*J = (*J) * layers[i].W;
 				}
 			}
-			else if (layers[i].type == mlpfile::Input) {
-				// TODO: validate size
-			}
 			else {
 				throw std::runtime_error("unrecognized type");
 			}
 			stack.pop_back();
 		}
 		assert (stack.size() == 0);
+		// TODO: validate dimensionality
 		return *J;
 	}
 
@@ -280,19 +244,19 @@ namespace mlpfile
 				layers[i].b = layers[i].b - (rate * grad);
 				grad = backprop_grad;
 			}
-			else if (layers[i].type == mlpfile::Input) {
-				// TODO: validate size
-			}
 			else {
 				throw std::runtime_error("unrecognized type");
 			}
 		}
 		assert (stack.size() == 0);
+		// TODO: validate dimensionality
 	}
 
 	std::string Model::describe() const
 	{
-		return "mlpfile::Model with " + std::to_string(layers.size()) + " Layers";
+		return
+			"mlpfile::Model with " + std::to_string(layers.size()) + " Layers, "
+			+ std::to_string(input_dim) + " -> " + std::to_string(output_dim());
 	}
 
 }  // namespace mlpfile
