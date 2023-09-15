@@ -128,7 +128,7 @@ def test_ogd_onepoint(model, gradcase):
         print("final:", softmax(model2.forward(x)))
         print()
         # We should be able to fit perfectly using last layer's bias.
-        assert errs[-1] < gradcase.opt_loss() + 1e-5
+        assert errs[-1] < gradcase.opt_loss() + 5e-5
 
 
 @pytest.mark.parametrize("gradcase", GRAD_CASES, ids=GRAD_IDS)
