@@ -254,7 +254,7 @@ namespace mlpfile
 		return *J;
 	}
 
-	void Model::grad_update(Eigen::VectorXf x, Eigen::VectorXf y, Loss loss, float rate)
+	void Model::grad_update(Eigen::VectorXf x, Eigen::VectorXf y, LossGrad loss, float rate)
 	{
 		std::vector<Eigen::VectorXf> stack = fwdpass_stack(*this, x);
 
