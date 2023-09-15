@@ -26,11 +26,6 @@ def softmax(x):
     return e / np.sum(e)
 
 
-def random_simplex(n):
-    e = np.random.exponential(size=n)
-    return e / np.sum(e)
-
-
 # The point of this is to make sure we write the file exactly once and then
 # clean up after all tests are complete. See the pytest "How to use fixtures"
 # docs for more info.
