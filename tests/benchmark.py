@@ -116,20 +116,24 @@ def compare_forward(net_ours):
     x2 = torch.randn(INDIM)
     x2n = x2.numpy()
 
-    net_codegen = mlpfile.ModelCodegen(net_ours)
+    lib_codegen_c = mlpfile.codegen_compile(net_ours, eigen=False)
+    lib_codegen_eigen = mlpfile.codegen_compile(net_ours, eigen=True)
     ydst = np.zeros(OUTDIM, dtype=np.float32)
     xptr = x2n.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     yptr = ydst.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    def fwd_codegen(x):
-        net_codegen.forward(xptr, yptr)
+    def fwd_codegen_c(x):
+        lib_codegen_c.forward(xptr, yptr)
+    def fwd_codegen_eigen(x):
+        lib_codegen_eigen.forward(xptr, yptr)
 
     # Compare running time.
     TRIALS = 10000
     for f, x, name in [
-        (NET.forward,       x2, "  torch"),
-        (fwd_onnx,         x2n, "   onnx"),
-        (net_ours.forward, x2n, "   ours"),
-        (fwd_codegen,      x2n, "codegen"),
+        (NET.forward,        x2, "        torch"),
+        (fwd_onnx,          x2n, "         onnx"),
+        (net_ours.forward,  x2n, "         ours"),
+        (fwd_codegen_c,     x2n, "    codegen_c"),
+        (fwd_codegen_eigen, x2n, "codegen_eigen"),
     ]:
         t0 = time.time()
         with torch.inference_mode():

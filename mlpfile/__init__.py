@@ -9,7 +9,7 @@ import numpy as np
 from _mlpfile import Model, Layer, LayerType
 
 
-__all__ = ["Model", "ModelCodegen", "Layer", "LayerType", "codegen", "cpp_dir"]
+__all__ = ["Model", "Layer", "LayerType", "codegen_compile", "codegen_c", "codegen_eigen", "cpp_dir"]
 
 
 def cpp_dir():
@@ -24,35 +24,32 @@ def cpp_dir():
     print(os.path.dirname(__file__) + "/cpp", end="")  # no newline
 
 
-class ModelCodegen:
-    """Does the codgen, compiles to DLL, then loads the DLL."""
-    def __init__(self, model, eigen=True):
+def codegen_compile(model, workdir=None, eigen=True, eigendir=None):
+    if workdir is None:
         with tempfile.TemporaryDirectory() as d:
-            if eigen:
-                src = d + "/src.cpp"
-            else:
-                src = d + "/src.c"
-            obj = d + "/obj.o"
-            lib = d + "/lib.so"
-            with open(src, "w") as f:
-                if eigen:
-                    codegen_eigen(model, f)
-                else:
-                    codegen_c(model, f)
-            if eigen:
-                import eigenpip
-                incl = "-I" + eigenpip.get_include()
-                result_compile = subprocess.run([
-                    "c++", "-c", "-fPIC", "-O3", incl, "--std=c++11", "-fno-exceptions", "-DEIGEN_NO_MALLOC", "-o", obj, src])
-            else:
-                result_compile = subprocess.run(["cc", "-c", "-fPIC", "-O3", "-o", obj, src])
-            assert result_compile.returncode == 0
-            result_shared = subprocess.run(["cc", "-shared", "-o", lib, obj])
-            assert result_shared.returncode == 0
-            self.library = ctypes.cdll.LoadLibrary(lib)
+            return codegen_compile(model, d, eigen)
 
-    def forward(self, xptr, yptr):
-        self.library.forward(xptr, yptr)
+    src = workdir + "/src.c" + ("pp" if eigen else "")
+    obj = workdir + "/obj.o"
+    lib = workdir + "/lib.so"
+    with open(src, "w") as f:
+        if eigen:
+            codegen_eigen(model, f)
+        else:
+            codegen_c(model, f)
+    flags_both = ["-c", "-fPIC", "-O3", "-o", obj]
+    if eigen:
+        if eigendir is None:
+            import eigenpip
+            eigendir = eigenpip.get_include()
+        flags_eig = ["--std=c++11", "-I" + eigendir, "-fno-exceptions", "-DEIGEN_NO_MALLOC"]
+        result_compile = subprocess.run(["c++"] + flags_both + flags_eig + [src])
+    else:
+        result_compile = subprocess.run(["cc"] + flags_both + [src])
+    assert result_compile.returncode == 0
+    result_shared = subprocess.run(["cc", "-shared", "-o", lib, obj])
+    assert result_shared.returncode == 0
+    return ctypes.cdll.LoadLibrary(lib)
 
 
 def codegen_c(model, f):

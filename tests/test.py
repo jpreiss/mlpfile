@@ -139,12 +139,13 @@ def test_cpp_dir(capfd):
     assert out.endswith("cpp")
 
 
-def test_codegen(model):
-    model_codegen = mlpfile.ModelCodegen(model)
+@pytest.mark.parametrize("eigen", [True, False])
+def test_codegen(model, eigen):
+    lib = mlpfile.codegen_compile(model, eigen=eigen)
     x = np.random.normal(size=INDIM).astype(np.float32)
     y = np.zeros(OUTDIM, dtype=np.float32)
     xptr = x.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     yptr = y.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    model_codegen.forward(xptr, yptr)
+    lib.forward(xptr, yptr)
     y2 = model.forward(x)
     assert np.allclose(y, y2)
