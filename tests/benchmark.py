@@ -1,5 +1,6 @@
 import contextlib
 from copy import deepcopy
+import ctypes
 import os
 import tempfile
 import time
@@ -111,14 +112,16 @@ def compare_forward(net_ours):
     def fwd_onnx(x):
         return session.run(None, {input_name: x})[0]
 
-    net_codegen = mlpfile.ModelCodegen(net_ours)
-    ydst = np.zeros(OUTDIM, dtype=np.float32)
-    def fwd_codegen(x):
-        net_codegen.forward(x, ydst)
-
     # Evaluate with a different input to make sure the ReLU activations change.
     x2 = torch.randn(INDIM)
     x2n = x2.numpy()
+
+    net_codegen = mlpfile.ModelCodegen(net_ours)
+    ydst = np.zeros(OUTDIM, dtype=np.float32)
+    xptr = x2n.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    yptr = ydst.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    def fwd_codegen(x):
+        net_codegen.forward(xptr, yptr)
 
     # Compare running time.
     TRIALS = 10000

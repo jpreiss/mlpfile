@@ -1,4 +1,5 @@
 from copy import deepcopy
+import ctypes
 import tempfile
 
 import numpy as np
@@ -142,6 +143,8 @@ def test_codegen(model):
     model_codegen = mlpfile.ModelCodegen(model)
     x = np.random.normal(size=INDIM).astype(np.float32)
     y = np.zeros(OUTDIM, dtype=np.float32)
-    model_codegen.forward(x, y)
+    xptr = x.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    yptr = y.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    model_codegen.forward(xptr, yptr)
     y2 = model.forward(x)
     assert np.allclose(y, y2)
