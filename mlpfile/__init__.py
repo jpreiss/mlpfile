@@ -1,8 +1,9 @@
 """mlpfile: Multilayer perceptron file format and evaluation."""
 
-import tempfile
 import ctypes
+import os
 import subprocess
+import tempfile
 import warnings
 
 from _mlpfile import Model, Layer, LayerType
@@ -56,9 +57,11 @@ def codegen(model, outdir=None, eigen=True, compile=False):
 
     Args:
         model (Model): Model.
-        outdir (str, optional): If specified, writes code, object file, and
-            shared lib to this directory. Otherwise, uses a temporary directory
-            deleted immediately after call. ``outdir=None`` only makes sense when ``compile=True``.
+        outdir (str, optional): If specified, writes header and code to this
+            directory. If ``compile=True``, also stores object file and shared
+            library. If ``outdir=None``, uses a temporary directory deleted
+            immediately after call. Note: ``outdir=None`` only makes sense when
+            ``compile=True``.
         eigen (bool): Use Eigen internally. If true, we generate code that uses
             the Eigen C++ library. Eigen's matrix-vector multiply is much
             faster than our hand-written naive one when ``eigen=False``.
@@ -84,11 +87,23 @@ def codegen(model, outdir=None, eigen=True, compile=False):
     if outdir is None:
         with tempfile.TemporaryDirectory() as d:
             return codegen(model, outdir=d, eigen=eigen, compile=compile)
+    else:
+        os.makedirs(outdir, exist_ok=True)
+        print("writing to", outdir)
 
-    src = outdir + "/src." + ("cpp" if eigen else "c")
-    obj = outdir + "/obj.o"
-    lib = outdir + "/lib.so"
+    header = outdir + "/mlp.h"
+    src = outdir + "/mlp." + ("cpp" if eigen else "c")
+    obj = outdir + "/mlp.o"
+    lib = outdir + "/mlp.so"
+
+    with open(header, "w") as f:
+        f.write(f"#pragma once\n\n")
+        f.write(f"#define MLP_INPUT_DIM {model.input_dim()}\n")
+        f.write(f"#define MLP_OUTPUT_DIM {model.output_dim()}\n\n")
+        f.write("void forward(float const *x, float *y);\n")
+
     with open(src, "w") as f:
+        f.write('#include "mlp.h"\n\n')
         if eigen:
             codegen_eigen(model, f)
         else:
