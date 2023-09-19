@@ -103,7 +103,6 @@ def codegen(model, outdir=None, eigen=True, compile=False):
         f.write("void forward(float const *x, float *y);\n")
 
     with open(src, "w") as f:
-        f.write('#include "mlp.h"\n\n')
         if eigen:
             codegen_eigen(model, f)
         else:
