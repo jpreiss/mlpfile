@@ -5,8 +5,6 @@ import ctypes
 import subprocess
 import warnings
 
-import numpy as np
-
 from _mlpfile import Model, Layer, LayerType
 from ._codegen import codegen_c, codegen_eigen
 
