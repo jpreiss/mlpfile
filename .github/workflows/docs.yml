@@ -1,13 +1,13 @@
 name: Deploy Sphinx documentation to Pages
 
 on:
-  push:
-    branches: [master] # branch to trigger deployment
+  release:
+    types:
+      - published
 
 jobs:
   pages:
     runs-on: ubuntu-20.04
-    if: github.event_name == 'release' && github.event.action == 'published'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
