@@ -105,7 +105,7 @@ def codegen_eigen(model, f):
     size = model.input_dim()
     f.write(f'extern "C" void forward(float const *xptr, float *yptr) {{\n')
     f.write(f"Eigen::Map<Eigen::Matrix<float, {size}, 1> const> x(xptr);\n")
-    f.write(f"work[0].template head<{size}>() = x;\n")
+    f.write(f"work[0].head<{size}>() = x;\n")
     src = 0
     dst = 1
     for ilayer, layer in enumerate(model.layers):
@@ -113,13 +113,13 @@ def codegen_eigen(model, f):
             continue
         elif layer.type == LayerType.Linear:
             newsize = layer.W.shape[0]
-            f.write(f"work[{dst}].template head<{newsize}>() = W_{ilayer} * work[{src}].template head<{size}>() + b_{ilayer};\n")
+            f.write(f"work[{dst}].head<{newsize}>() = W_{ilayer} * work[{src}].head<{size}>() + b_{ilayer};\n")
             size = newsize
         elif layer.type == LayerType.ReLU:
-            f.write(f"work[{dst}].template head<{size}>() = work[{src}].template head<{size}>().array().max(0);\n")
+            f.write(f"work[{dst}].head<{size}>() = work[{src}].head<{size}>().array().max(0);\n")
         else:
             raise ValueError("layer type:", layer.type)
         src, dst = dst, src
     f.write(f"Eigen::Map<Eigen::Matrix<float, {model.output_dim()}, 1> > y(yptr);\n")
-    f.write(f"y = work[{src}].template head<{size}>();\n")
+    f.write(f"y = work[{src}].head<{size}>();\n")
     f.write("}")
