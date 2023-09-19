@@ -7,6 +7,7 @@ Features:
 - Evaluate the network and/or its Jacobian on an input.
 - Perform a step of gradient descent for squared error loss.*
 - C++ interface uses Eigen types.
+- Generate fast allocation-free C code for the forward pass.
 - Binary file I/O (no C++ dependency on Protobuf, etc.)
 
 API docs: [https://jpreiss.github.io/mlpfile/api.html](https://jpreiss.github.io/mlpfile/api.html)
