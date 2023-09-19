@@ -83,7 +83,7 @@ def codegen_compile(model, workdir=None, eigen=True):
     if eigen:
         import eigenpip
         incl = "-I" + eigenpip.get_include()
-        flags_eig = ["--std=c++11", incl, "-fno-exceptions", "-DEIGEN_NO_MALLOC"]
+        flags_eig = [incl, "-fno-exceptions", "-DEIGEN_NO_MALLOC"]
         result_compile = subprocess.run(["c++"] + flags_both + flags_eig + [src])
     else:
         result_compile = subprocess.run(["cc"] + flags_both + [src])
