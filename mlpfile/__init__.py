@@ -47,9 +47,9 @@ def codegen(model, outdir=None, eigen=True, compile=False):
         lib.forward(xptr, yptr)
         # Now y has the output.
 
-    Even if you don't want to use the compiled code from Python, this function
-    can be helpful because it knows the correct compiler flags. This is
-    especially important when ``eigen=True``.
+    Even if you don't want to use the compiled code from Python,
+    ``compile=True`` can be helpful because it knows the correct compiler
+    flags. This is especially important when ``eigen=True``.
 
     To compile the Eigen code yourself, these flags ensure the code works in a
     malloc-free (embedded/realtime) environment and can be linked as C::
