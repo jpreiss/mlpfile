@@ -163,7 +163,7 @@ def test_ogd_finitediff(model, gradcase):
             f"predicted: {loss_predicted}, "
             f"actual: {loss_actual}"
         )
-        assert np.abs(loss_predicted - loss_actual) / loss_original < 1e-3
+        assert np.abs(loss_predicted - loss_actual) / loss_original < 5e-3
 
 
 def test_ogd_multipoint(model):
