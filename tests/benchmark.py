@@ -116,8 +116,8 @@ def compare_forward(net_ours):
     x2 = torch.randn(INDIM)
     x2n = x2.numpy()
 
-    lib_codegen_c = mlpfile.codegen_compile(net_ours, eigen=False)
-    lib_codegen_eigen = mlpfile.codegen_compile(net_ours, eigen=True)
+    lib_codegen_c = mlpfile.codegen(net_ours, eigen=False, compile=True)
+    lib_codegen_eigen = mlpfile.codegen(net_ours, eigen=True, compile=True)
     ydst = np.zeros(OUTDIM, dtype=np.float32)
     xptr = x2n.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     yptr = ydst.ctypes.data_as(ctypes.POINTER(ctypes.c_float))

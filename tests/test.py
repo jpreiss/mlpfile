@@ -141,7 +141,7 @@ def test_cpp_dir(capfd):
 
 @pytest.mark.parametrize("eigen", [True, False])
 def test_codegen(model, eigen):
-    lib = mlpfile.codegen_compile(model, eigen=eigen)
+    lib = mlpfile.codegen(model, eigen=eigen, compile=True)
     x = np.random.normal(size=INDIM).astype(np.float32)
     y = np.zeros(OUTDIM, dtype=np.float32)
     xptr = x.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
