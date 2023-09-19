@@ -24,7 +24,49 @@ def cpp_dir():
     print(os.path.dirname(__file__) + "/cpp", end="")  # no newline
 
 
-def codegen_compile(model, workdir=None, eigen=True, eigendir=None):
+def codegen_compile(model, workdir=None, eigen=True):
+    """Generates and compiles code to evaluate the model's forward pass.
+
+    Compiles the code into an object file and shared library containing the
+    function::
+
+        void forward(float const *x, float *y)
+
+    Note that size arguments are not needed because they are known at compile time.
+
+    This function also loads the library with ``ctypes`` and returns the Python
+    object representing the library. To call from Python+NumPy, use code like::
+
+        lib = mlpfile.codegen_compile(model)
+        x = <my input of length model.input_dim()>.astype(np.float32)
+        y = np.zeros(model.output_dim(), dtype=np.float32)
+        xptr = x.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+        yptr = y.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+        lib.forward(xptr, yptr)
+        # Now y has the output.
+
+    However, even if you want to use the code from C instead of Python, this
+    function can still be helpful because it will use the correct compiler
+    flags. This is especially important when ``eigen=True``.
+
+    Args:
+        model (Model): Model.
+        workdir (str, optional): If specified, writes code, object file, and
+            shared lib to this directory. Otherwise, uses a temporary directory
+            deleted immediately after call. The returned ``ctypes.CDLL`` will be
+            loaded before the temporary dir is deleted, so you can still use it
+            until the process terminates.
+        eigen (bool): Use Eigen internally. If true, we generate code that uses
+            the Eigen C++ library. Eigen's matrix-vector multiply is much
+            faster than our hand-written naive one when ``eigen=False``.
+            Generates a function with ``extern "C"`` linkage, no dynamic
+            memory, and no exceptions. Therefore, the compiled object/library
+            can be used in C projects, with a C linker, even though it was
+            compiled by a C++ compiler.
+
+    Returns:
+        a ``ctypes.CDLL`` library with function ``forward`` described in overview.
+    """
     if workdir is None:
         with tempfile.TemporaryDirectory() as d:
             return codegen_compile(model, d, eigen)
@@ -39,10 +81,9 @@ def codegen_compile(model, workdir=None, eigen=True, eigendir=None):
             codegen_c(model, f)
     flags_both = ["-c", "-fPIC", "-O3", "-o", obj]
     if eigen:
-        if eigendir is None:
-            import eigenpip
-            eigendir = eigenpip.get_include()
-        flags_eig = ["--std=c++11", "-I" + eigendir, "-fno-exceptions", "-DEIGEN_NO_MALLOC"]
+        import eigenpip
+        incl = "-I" + eigenpip.get_include()
+        flags_eig = ["--std=c++11", incl, "-fno-exceptions", "-DEIGEN_NO_MALLOC"]
         result_compile = subprocess.run(["c++"] + flags_both + flags_eig + [src])
     else:
         result_compile = subprocess.run(["cc"] + flags_both + [src])
@@ -53,6 +94,11 @@ def codegen_compile(model, workdir=None, eigen=True, eigendir=None):
 
 
 def codegen_c(model, f):
+    """Generates C code to evaluate the model's forward pass.
+
+    Takes ``mlpfile.Model`` and open file-like object. See the docstring of
+    ``codegen_compile`` for details.
+    """
     def array1d(x):
         return "{" + ", ".join([str(xi) for xi in x]) + "}"
 
@@ -121,6 +167,11 @@ for (int i = 0; i < {size}; ++i) {{
 
 
 def codegen_eigen(model, f):
+    """Generates C++ code with C-only API to evaluate the model's forward pass.
+
+    Takes ``mlpfile.Model`` and open file-like object. See the docstring of
+    ``codegen_compile`` for details.
+    """
     def array1d(x):
         return "{" + ", ".join([str(xi) for xi in x]) + "}"
 
@@ -134,9 +185,13 @@ def codegen_eigen(model, f):
     for i, layer in enumerate(model.layers):
         if layer.type == LayerType.Linear:
             rows, cols = layer.W.shape
+            # I would have preferred to store data directly in Eigen::Matrices
+            # instead of the extra complexity of these Eigen::Maps. But for
+            # some reason the initializer list constructor of Eigen::Matrix
+            # wasn't working even though I was using C++11.
             f.write(f"float arr_W_{i}[{rows}][{cols}] = {array2d(layer.W)};\n")
             f.write(f"float arr_b_{i}[{rows}] = {array1d(layer.b)};\n")
-            f.write(f"Eigen::Map<Eigen::Matrix<float, {rows}, {cols}, Eigen::RowMajor>> W_{i} (&arr_W_{i}[0][0]);\n")
+            f.write(f"Eigen::Map<Eigen::Matrix<float, {rows}, {cols}, Eigen::RowMajor>> W_{i} (arr_W_{i}[0]);\n")
             f.write(f"Eigen::Map<Eigen::Matrix<float, {rows}, 1>> b_{i} (arr_b_{i});\n")
 
     # workspace
@@ -149,8 +204,7 @@ def codegen_eigen(model, f):
 
     # code
     size = model.input_dim()
-    f.write('extern "C" { void forward(float const *xptr, float *yptr); }\n')
-    f.write(f'void forward(float const *xptr, float *yptr) {{\n')
+    f.write(f'extern "C" void forward(float const *xptr, float *yptr) {{\n')
     f.write(f"Eigen::Map<Eigen::Matrix<float, {size}, 1> const> x(xptr);\n")
     f.write(f"work[0].template head<{size}>() = x;\n")
     src = 0

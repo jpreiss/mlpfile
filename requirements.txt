@@ -5,6 +5,9 @@ onnxruntime
 pybind11
 pytest
 setuptools
+sphinx
+sphinx_mdinclude
+sphinx_rtd_theme
 six
 torch
 wheel
