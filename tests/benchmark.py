@@ -1,5 +1,6 @@
 import contextlib
 from copy import deepcopy
+import ctypes
 import os
 import tempfile
 import time
@@ -115,12 +116,24 @@ def compare_forward(net_ours):
     x2 = torch.randn(INDIM)
     x2n = x2.numpy()
 
+    lib_codegen_c = mlpfile.codegen(net_ours, eigen=False, compile=True)
+    lib_codegen_eigen = mlpfile.codegen(net_ours, eigen=True, compile=True)
+    ydst = np.zeros(OUTDIM, dtype=np.float32)
+    xptr = x2n.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    yptr = ydst.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    def fwd_codegen_c(x):
+        lib_codegen_c.forward(xptr, yptr)
+    def fwd_codegen_eigen(x):
+        lib_codegen_eigen.forward(xptr, yptr)
+
     # Compare running time.
     TRIALS = 10000
     for f, x, name in [
-        (NET.forward, x2, "torch"),
-        (fwd_onnx, x2n, " onnx"),
-        (net_ours.forward, x2n, " ours"),
+        (NET.forward,        x2, "        torch"),
+        (fwd_onnx,          x2n, "         onnx"),
+        (net_ours.forward,  x2n, "         ours"),
+        (fwd_codegen_c,     x2n, "    codegen_c"),
+        (fwd_codegen_eigen, x2n, "codegen_eigen"),
     ]:
         t0 = time.time()
         with torch.inference_mode():
@@ -128,6 +141,11 @@ def compare_forward(net_ours):
                 _ = f(x)
         us_per = 1000 * 1000 * (time.time() - t0) / TRIALS
         print(f"{name}: {us_per:7.2f} usec")
+
+    # TODO: Why is codegen_c so much slower Eigen? Even "ours" is faster
+    # despite sizes not known at compile time. The loops are so simple,
+    # shouldn't a compiler be able to SIMD vectorize them? What else are we
+    # leaving on the table?
 
 
 def compare_jacobian(net_ours):

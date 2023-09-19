@@ -1,4 +1,5 @@
 from copy import deepcopy
+import ctypes
 import tempfile
 
 import numpy as np
@@ -136,3 +137,15 @@ def test_cpp_dir(capfd):
     mlpfile.cpp_dir()
     out, _ = capfd.readouterr()
     assert out.endswith("cpp")
+
+
+@pytest.mark.parametrize("eigen", [True, False])
+def test_codegen(model, eigen):
+    lib = mlpfile.codegen(model, eigen=eigen, compile=True)
+    x = np.random.normal(size=INDIM).astype(np.float32)
+    y = np.zeros(OUTDIM, dtype=np.float32)
+    xptr = x.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    yptr = y.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    lib.forward(xptr, yptr)
+    y2 = model.forward(x)
+    assert np.allclose(y, y2)
