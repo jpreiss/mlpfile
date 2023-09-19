@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 #include <Eigen/Dense>
 
@@ -28,6 +29,15 @@ namespace mlpfile
 
 		std::string describe() const;
 	};
+
+	// Args: Estimate, target. Returns: Gradient of loss w.r.t. estimate.
+	using LossGrad = std::function<Eigen::VectorXf(Eigen::VectorXf, Eigen::VectorXf)>;
+
+	Eigen::VectorXf squared_error(Eigen::VectorXf y, Eigen::VectorXf target);
+	static_assert(std::is_convertible<decltype(squared_error), LossGrad>::value);
+
+	Eigen::VectorXf softmax_cross_entropy(Eigen::VectorXf y, Eigen::VectorXf target);
+	static_assert(std::is_convertible<decltype(softmax_cross_entropy), LossGrad>::value);
 
 	struct Model
 	{
@@ -56,9 +66,11 @@ namespace mlpfile
 
 		// Does a step of gradient descent for regression loss on one point.
 		//
-		// Updates the parameters in-place for a step of gradient descent on
-		// the regression loss `1/2 || model.forward(x) - y ||_2^2`.
-		void ogd_update_lstsq(Eigen::VectorXf x, Eigen::VectorXf y, float rate);
+		// Updates the parameters in-place for a step of gradient descent. From
+		// Python, loss can be either a C++ function matching the `LossGrad` type
+		// alias above (such as `squared_error`) or a Python function with the
+		// equivalent NumPy signature.
+		void grad_update(Eigen::VectorXf x, Eigen::VectorXf y, LossGrad loss, float rate);
 
 		// Pretty-prints a description of the network architecture.
 		std::string describe() const;

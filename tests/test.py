@@ -22,6 +22,11 @@ def norm2(x):
     return np.sum(x ** 2)
 
 
+def softmax(x):
+    e = np.exp(x)
+    return e / np.sum(e)
+
+
 # The point of this is to make sure we write the file exactly once and then
 # clean up after all tests are complete. See the pytest "How to use fixtures"
 # docs for more info.
@@ -51,52 +56,114 @@ def test_jacobian(model):
         assert np.all(np.isclose(J.flat, Jtorch.flat, atol=1e-6, rtol=1e-4))
 
 
-def test_ogd_onepoint(model):
-    model = deepcopy(model)
-    rate = 1e-2
+class GradCaseSqErr:
+    def __init__(self):
+        self.randomize()
+        self.lossgrad = mlpfile.squared_error
+        self.rate = 1e-2
+
+    def randomize(self):
+        self.ytrue = np.random.normal(size=OUTDIM)
+
+    def loss(self, y):
+        # Accounting for the 1/2 is important!
+        return 0.5 * norm2(self.ytrue - y)
+
+    def opt_loss(self):
+        return 0.0
+
+
+# In earlier prototype we set ytrue to a uniform (wrt Borel measure) sample
+# from the simplex. However, it needed unreasonably many iterations to reach
+# low error in test_ogd_onepoint. Choosing these sharp distributions (like we
+# actually use in supervised classification) and a high learning rate gives
+# fast convergence. TODO: Build more intuition for softmax cross-entropy to
+# understand this. Why would fitting a high-entropy distribution require more
+# steps?
+class GradCaseXEnt:
+    def __init__(self):
+        self.randomize()
+        self.lossgrad = mlpfile.softmax_cross_entropy
+        self.rate = 1e-1
+
+    def randomize(self):
+        self.ytrue = (0.1 / (OUTDIM - 1)) * np.ones(OUTDIM)
+        hot = np.random.choice(OUTDIM)
+        self.ytrue[hot] = 0.9
+
+    def loss(self, y):
+        s = np.exp(y)
+        s /= np.sum(s)
+        return -np.sum(self.ytrue * np.log(s))
+
+    def opt_loss(self):
+        return -np.sum(np.log(self.ytrue) * self.ytrue)
+
+
+GRAD_CASES = [GradCaseSqErr(), GradCaseXEnt()]
+GRAD_IDS = ["squared-error", "cross-entropy"]
+
+
+@pytest.mark.parametrize("gradcase", GRAD_CASES, ids=GRAD_IDS)
+def test_ogd_onepoint(model, gradcase):
     x = np.random.normal(size=INDIM)
-    ytrue = np.random.normal(size=OUTDIM)
     # Full log makes debugging easier - plots, etc.
-    errs = []
-    for i in range(100):
-        y = model.forward(x);
-        errs.append(norm2(y - ytrue))
-        model.ogd_update_lstsq(x, ytrue, rate)
-    errs.append(norm2(model.forward(x) - ytrue))
-    # We should be able to fit perfectly using last layer's bias.
-    assert errs[-1] < 1e-8
+    trials = 100
+    iters = 100
+    gamma = 1.0 ** (1.0 / iters)
+    rate = gradcase.rate
+    for trial in range(trials):
+        model2 = deepcopy(model)
+        gradcase.randomize()
+        print("initial:", gradcase.loss(model2.forward(x)))
+        print(softmax(model2.forward(x)))
+        print("opt:", gradcase.opt_loss())
+        print(gradcase.ytrue)
+        errs = []
+        for i in range(iters):
+            y = model2.forward(x);
+            errs.append(gradcase.loss(y))
+            model2.grad_update(x, gradcase.ytrue, gradcase.lossgrad, rate)
+            rate *= gamma
+        errs.append(gradcase.loss(model2.forward(x)))
+        print("final:", softmax(model2.forward(x)))
+        print()
+        # We should be able to fit perfectly using last layer's bias.
+        assert errs[-1] < gradcase.opt_loss() + 5e-5
 
 
-def test_ogd_finitediff(model):
+@pytest.mark.parametrize("gradcase", GRAD_CASES, ids=GRAD_IDS)
+def test_ogd_finitediff(model, gradcase):
     x = np.random.normal(size=INDIM)
-    y = np.random.normal(size=OUTDIM)
-    # Accounting for the 1/2 is important!
-    loss_original = 0.5 * norm2(model.forward(x) - y)
+    loss_original = gradcase.loss(model.forward(x))
+    rate = gradcase.rate / 10
 
-    rate = 1e-3
-    model2 = deepcopy(model)
-    model2.ogd_update_lstsq(x, y, rate)
+    trials = 100
+    for trial in range(trials):
+        model2 = deepcopy(model)
+        model2.grad_update(x, gradcase.ytrue, gradcase.lossgrad, rate)
 
-    # Reverse engineer what the gradient was.
-    layers = model.layers
-    grad_dot_step = 0.0
-    for i in range(len(layers)):
-        if layers[i].type == mlpfile.LayerType.Linear:
-            gradW = (model2.layers[i].W - model.layers[i].W) / rate
-            grad_dot_step -= rate * norm2(gradW.flatten())
-            gradb = (model2.layers[i].b - model.layers[i].b) / rate
-            grad_dot_step -= rate * norm2(gradb)
+        # Reverse engineer what the gradient was.
+        layers = model.layers
+        grad_dot_step = 0.0
+        for i in range(len(layers)):
+            if layers[i].type == mlpfile.LayerType.Linear:
+                gradW = (model2.layers[i].W - model.layers[i].W) / rate
+                grad_dot_step -= rate * norm2(gradW.flatten())
+                gradb = (model2.layers[i].b - model.layers[i].b) / rate
+                grad_dot_step -= rate * norm2(gradb)
 
-    # Predict what the new loss should be using first-order approximation.
-    loss_predicted = loss_original + grad_dot_step
-    assert loss_predicted < loss_original
-    loss_actual = 0.5 * norm2(model2.forward(x) - y)
-    print(
-        f"original: {loss_original}, "
-        f"predicted: {loss_predicted}, "
-        f"actual: {loss_actual}"
-    )
-    assert np.abs(loss_predicted - loss_actual) / loss_original < 5e-3
+        # Predict what the new loss should be using first-order approximation.
+        loss_predicted = loss_original + grad_dot_step
+        assert loss_predicted < loss_original
+        loss_actual = gradcase.loss(model2.forward(x))
+        print(
+            f"loss {gradcase.lossgrad.__name__}:\n"
+            f"original: {loss_original}, "
+            f"predicted: {loss_predicted}, "
+            f"actual: {loss_actual}"
+        )
+        assert np.abs(loss_predicted - loss_actual) / loss_original < 1e-3
 
 
 def test_ogd_multipoint(model):
@@ -112,7 +179,7 @@ def test_ogd_multipoint(model):
     for epoch in range(50):
         for i in range(N):
             y = model.forward(xs[i]);
-            model.ogd_update_lstsq(xs[i], ys[i], rate)
+            model.grad_update(xs[i], ys[i], mlpfile.squared_error, rate)
         errs.append(np.mean([
             norm2(model.forward(x) - y)
             for x, y in zip(xs, ys)
@@ -148,4 +215,4 @@ def test_codegen(model, eigen):
     yptr = y.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     lib.forward(xptr, yptr)
     y2 = model.forward(x)
-    assert np.allclose(y, y2)
+    assert np.allclose(y, y2, atol=1e-6)

@@ -6,11 +6,15 @@ import subprocess
 import tempfile
 import warnings
 
-from _mlpfile import Model, Layer, LayerType
+from _mlpfile import *
 from ._codegen import codegen_c, codegen_eigen
 
 
-__all__ = ["Model", "Layer", "LayerType", "codegen", "cpp_dir"]
+__all__ = [
+    "Model", "Layer", "LayerType", # Bound class/enum.
+    "squared_error", "softmax_cross_entropy", # Bound function.
+    "codegen", "cpp_dir", # Pure Python.
+]
 
 
 def cpp_dir():

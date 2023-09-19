@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 #include <pybind11/eigen.h>
+#include <pybind11/functional.h>
+#include <pybind11/stl.h>
 
 #include "mlpfile.h"
 
@@ -48,9 +49,9 @@ PYBIND11_MODULE(_mlpfile, m) {
         .def("jacobian", &mlpfile::Model::jacobian,
             "Computes the MLP's Jacobian.",
             py::arg("input"))
-        .def("ogd_update_lstsq", &mlpfile::Model::ogd_update_lstsq,
-            "Performs one step of online gradient descent for a least-squares loss.",
-            py::arg("x"), py::arg("y"), py::arg("rate"))
+        .def("grad_update", &mlpfile::Model::grad_update,
+            "Performs one step of gradient descent for one data point.",
+            py::arg("x"), py::arg("y"), py::arg("loss"), py::arg("rate"))
         .def("__str__", &mlpfile::Model::describe)
         .def("__copy__",  [](mlpfile::Model const &self) {
             return mlpfile::Model(self);
@@ -59,4 +60,7 @@ PYBIND11_MODULE(_mlpfile, m) {
             return mlpfile::Model(self);
         }, "memo")
         .doc() = "Main class for loaded MLP models.";
+
+    m.def("squared_error", &mlpfile::squared_error);
+    m.def("softmax_cross_entropy", &mlpfile::softmax_cross_entropy);
 }

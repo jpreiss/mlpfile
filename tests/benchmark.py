@@ -217,7 +217,7 @@ def compare_ogd(net_ours):
         opt.step()
 
     def ours_ogd(x, y):
-        net_ours.ogd_update_lstsq(x, y, rate)
+        net_ours.grad_update(x, y, mlpfile.squared_error, rate)
 
     # Compare running time.
     TRIALS = 1000
