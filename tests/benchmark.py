@@ -142,8 +142,10 @@ def compare_forward(net_ours):
         us_per = 1000 * 1000 * (time.time() - t0) / TRIALS
         print(f"{name}: {us_per:7.2f} usec")
 
-    # TODO: Why is codegen so much slower than ours? It's even slower than ONNX
-    # on my M1 macbook. Are we failing to use SIMD instructions, maybe?
+    # TODO: Why is codegen_c so much slower Eigen? Even "ours" is faster
+    # despite sizes not known at compile time. The loops are so simple,
+    # shouldn't a compiler be able to SIMD vectorize them? What else are we
+    # leaving on the table?
 
 
 def compare_jacobian(net_ours):
