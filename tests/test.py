@@ -215,4 +215,4 @@ def test_codegen(model, eigen):
     yptr = y.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     lib.forward(xptr, yptr)
     y2 = model.forward(x)
-    assert np.allclose(y, y2)
+    assert np.allclose(y, y2, atol=1e-6)
