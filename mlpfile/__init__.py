@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import warnings
 
-from _mlpfile import Model, Layer, LayerType
+from _mlpfile import *
 from ._codegen import codegen_c, codegen_eigen
 
 
