@@ -5,11 +5,14 @@ import os
 import tempfile
 import time
 
+import matplotlib.pyplot as plt
 import mlpfile
 import mlpfile.torch
 import numpy as np
 import onnxruntime as ort
 from onnxruntime.quantization import quantize_dynamic, QuantType
+import pandas as pd
+import seaborn as sns
 import torch
 
 
@@ -128,24 +131,26 @@ def compare_forward(net_ours):
 
     # Compare running time.
     TRIALS = 10000
+    records = []
     for f, x, name in [
-        (NET.forward,        x2, "        torch"),
-        (fwd_onnx,          x2n, "         onnx"),
-        (net_ours.forward,  x2n, "         ours"),
-        (fwd_codegen_c,     x2n, "    codegen_c"),
-        (fwd_codegen_eigen, x2n, "codegen_eigen"),
+        (NET.forward,        x2, "torch"),
+        (fwd_onnx,          x2n, "onnx"),
+        (net_ours.forward,  x2n, "ours"),
+        (fwd_codegen_c,     x2n, "ours-codegen-c"),
+        (fwd_codegen_eigen, x2n, "ours-codegen-eigen"),
     ]:
         t0 = time.time()
         with torch.inference_mode():
             for _ in range(TRIALS):
                 _ = f(x)
         us_per = 1000 * 1000 * (time.time() - t0) / TRIALS
-        print(f"{name}: {us_per:7.2f} usec")
+        records.append(dict(test="forward", method=name, time_us=us_per))
 
     # TODO: Why is codegen_c so much slower Eigen? Even "ours" is faster
     # despite sizes not known at compile time. The loops are so simple,
     # shouldn't a compiler be able to SIMD vectorize them? What else are we
     # leaving on the table?
+    return records
 
 
 def compare_jacobian(net_ours):
@@ -186,18 +191,21 @@ def compare_jacobian(net_ours):
 
     # Compare running time.
     TRIALS = 1000
+    records = []
     for f, x, name in [
-        (jac_autodiff,       x2, "torch-autodiff"),
-        (jac.forward,        x2, "  torch-manual"),
-        (jac_onnx,          x2n, "          onnx"),
-        (net_ours.jacobian, x2n, "          ours"),
+        (jac_autodiff,       x2, "torch"),
+        (jac.forward,        x2, "torch-explicit"),
+        (jac_onnx,          x2n, "onnx"),
+        (net_ours.jacobian, x2n, "ours"),
     ]:
         t0 = time.time()
         with torch.inference_mode():
             for _ in range(TRIALS):
                 _ = f(x)
         us_per = 1000 * 1000 * (time.time() - t0) / TRIALS
-        print(f"{name}: {us_per:7.2f} usec")
+        records.append(dict(test="jacobian", method=name, time_us=us_per))
+
+    return records
 
 
 def compare_ogd(net_ours):
@@ -221,43 +229,53 @@ def compare_ogd(net_ours):
 
     # Compare running time.
     TRIALS = 1000
+    records = []
     for f, x, y, name in [
         (torch_ogd, xt, yt, "torch"),
-        (ours_ogd, xn, yn, " ours"),
+        (ours_ogd, xn, yn, "ours"),
     ]:
         t0 = time.time()
         for _ in range(TRIALS):
             _ = f(x, y)
         us_per = 1000 * 1000 * (time.time() - t0) / TRIALS
-        print(f"{name}: {us_per:7.2f} usec")
+        records.append(dict(test="gradient step", method=name, time_us=us_per))
 
-
-def _printbox(s):
-    n = len(s) + 2
-    print()
-    print("┌" + ("─" * n) + "┐")
-    print("│", s, "│")
-    print("└" + ("─" * n) + "┘")
+    return records
 
 
 def main():
+    wd = os.getcwd()
     with tempfile.TemporaryDirectory() as testdir:
         os.chdir(testdir)
         # Our format
         mlpfile.torch.write(NET, "Phi.mlp")
         net_ours = mlpfile.Model.load("Phi.mlp")
 
-        _printbox("Model structure")
         print(net_ours)
         for layer in net_ours.layers:
             print(layer)
-        _printbox("Forward")
-        compare_forward(net_ours)
-        _printbox("Jacobian")
-        compare_jacobian(net_ours)
-        _printbox("OGD-update")
-        compare_ogd(net_ours)
-        print()
+        records = []
+        records.extend(compare_forward(net_ours))
+        records.extend(compare_jacobian(net_ours))
+        records.extend(compare_ogd(net_ours))
+
+    os.chdir(wd)
+    df = pd.DataFrame(records)
+    plt.rcParams["text.usetex"] = True
+    grid = sns.catplot(
+        df,
+        kind="bar",
+        col="test",
+        orient="h",
+        y="method",
+        x="time_us",
+        hue=None,
+        sharex=False,
+        height=2.25,
+        aspect=1.0,
+    )
+    grid.savefig("mlpfile_benchmark.png", dpi=200)
+    grid.savefig("mlpfile_benchmark.svg")
 
 
 if __name__ == "__main__":

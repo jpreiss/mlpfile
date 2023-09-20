@@ -2,8 +2,10 @@ eigenpip
 numpy
 onnx
 onnxruntime
+pandas
 pybind11
 pytest
+seaborn
 setuptools
 sphinx
 sphinx_mdinclude
