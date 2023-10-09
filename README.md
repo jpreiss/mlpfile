@@ -88,7 +88,7 @@ torch:  117.98 usec
 Motivation
 ----------
 
-The performace shown above is a major motivation, but besides that:
+The performance shown above is a major motivation, but besides that:
 
 The typical choices for NN deployment from PyTorch to C++ (of which I am aware)
 are TorchScript and the ONNX format. Both are heavyweight and complicated
