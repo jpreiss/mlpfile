@@ -107,7 +107,7 @@ def compare_forward(net_ours):
     # Disable CPU multithreading - not worth the overhead for our small NN.
     sess_options.intra_op_num_threads = 1
     sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-    session = ort.InferenceSession(path, sess_options)
+    session = ort.InferenceSession(path, sess_options, providers=["CPUExecutionProvider"])
 
     def fwd_onnx(x):
         return session.run(None, {input_name: x})[0]
@@ -174,7 +174,7 @@ def compare_jacobian(net_ours):
     # Disable CPU multithreading - not worth the overhead for our small NN.
     sess_options.intra_op_num_threads = 1
     sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-    session = ort.InferenceSession(path, sess_options)
+    session = ort.InferenceSession(path, sess_options, providers=["CPUExecutionProvider"])
     def jac_onnx(x):
         return session.run(None, {input_name: x})[0]
 
