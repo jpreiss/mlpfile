@@ -91,6 +91,11 @@ def _check_onnx_size(path):
 
 def compare_forward(net_ours):
     path = "forward.onnx"
+
+    x_trace = torch.zeros(INDIM, requires_grad=False)
+    torchscript = torch.jit.trace(NET, x_trace)
+    torchscript = torch.jit.optimize_for_inference(torchscript)
+
     # ONNX for forward pass
     input_name = "x"
     output_name = "y"
@@ -129,11 +134,12 @@ def compare_forward(net_ours):
     # Compare running time.
     TRIALS = 10000
     for f, x, name in [
-        (NET.forward,        x2, "        torch"),
-        (fwd_onnx,          x2n, "         onnx"),
-        (net_ours.forward,  x2n, "         ours"),
-        (fwd_codegen_c,     x2n, "    codegen_c"),
-        (fwd_codegen_eigen, x2n, "codegen_eigen"),
+        (NET.forward,          x2, "        torch"),
+        (torchscript.forward,  x2, "  torchscript"),
+        (fwd_onnx,            x2n, "         onnx"),
+        (net_ours.forward,    x2n, "         ours"),
+        (fwd_codegen_c,       x2n, "    codegen_c"),
+        (fwd_codegen_eigen,   x2n, "codegen_eigen"),
     ]:
         t0 = time.time()
         with torch.inference_mode():
@@ -153,9 +159,16 @@ def compare_jacobian(net_ours):
     with torch.no_grad():
         jac_autodiff = torch.func.jacrev(NET)
 
+    # Note that torchscript-tracing jacrev didn't work when I tried it.
+
     # Option 2: Construct explicit Jacobian in PyTorch.
     jac = MLPJacobian(NET)
     jac.eval()
+
+    # Option 2.5: torchscript using explicit.
+    x_trace = torch.zeros(INDIM, requires_grad=False)
+    jac_torchscript = torch.jit.trace(jac, x_trace)
+    jac_torchscript = torch.jit.optimize_for_inference(jac_torchscript)
 
     # Option 3: Export and reload explicit Jacobian using ONNX.
     path = "jacobian.onnx"
@@ -187,10 +200,11 @@ def compare_jacobian(net_ours):
     # Compare running time.
     TRIALS = 1000
     for f, x, name in [
-        (jac_autodiff,       x2, "torch-autodiff"),
-        (jac.forward,        x2, "  torch-manual"),
-        (jac_onnx,          x2n, "          onnx"),
-        (net_ours.jacobian, x2n, "          ours"),
+        (jac_autodiff,            x2,  "    torch-autodiff"),
+        (jac.forward,             x2,  "      torch-manual"),
+        (jac_torchscript.forward, x2,  "torchscript-manual"),
+        (jac_onnx,                x2n, "              onnx"),
+        (net_ours.jacobian,       x2n, "              ours"),
     ]:
         t0 = time.time()
         with torch.inference_mode():
