@@ -7,7 +7,7 @@ Features:
 - Evaluate the network and/or its Jacobian on an input.
 - Perform a step of gradient descent (in place, for one datapoint, no momentum).
 - C++ interface uses Eigen types.
-- Generate fast allocation-free C code for the forward pass.
+- Generate fast allocation-free C or C++/Eigen code (faster) for the forward pass.
 - Binary file I/O (no C++ dependency on Protobuf, etc.)
 
 API docs: [https://jpreiss.github.io/mlpfile/api.html](https://jpreiss.github.io/mlpfile/api.html)
@@ -63,6 +63,16 @@ running `benchmark.py`.
 
 ```
 $ python benchmark.py
+
+┌─────────────────┐
+│ Model structure │
+└─────────────────┘
+mlpfile::Model with 5 Layers, 40 -> 10
+Linear: 40 -> 100
+ReLU
+Linear: 100 -> 100
+ReLU
+Linear: 100 -> 10
 
 ┌─────────┐
 │ Forward │
