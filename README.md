@@ -16,7 +16,7 @@ Installation
 ------------
 
 To use the Python export and/or bindings, install the
-[pip package](https://jpreiss.github.io/mlpfile/overview.html):
+[pip package](https://pypi.org/project/mlpfile/):
 
 ```pip install mlpfile```
 
