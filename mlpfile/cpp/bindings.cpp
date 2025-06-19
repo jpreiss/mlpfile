@@ -26,7 +26,8 @@ PYBIND11_MODULE(_mlpfile, m) {
 
     py::class_<mlpfile::LayerJacobian> (m, "LayerJacobian")
         .def(py::init<>())
-        .def_readonly("dW", &mlpfile::LayerJacobian::dW, "Jacobian w.r.t. weights.")
+        .def_readonly("dW", &mlpfile::LayerJacobian::dW,
+            "Jacobian w.r.t. weights. Dimension is output_dim() x (W.rows * W.cols). Each row is stored row-major, so reshaping a row into a W-shaped ndarray is compatible with W.")
         .def_readonly("db", &mlpfile::LayerJacobian::db, "Jacobian w.r.t. biases.")
         .doc() = "Jacobian of network output w.r.t. a layer's parameters."
     ;

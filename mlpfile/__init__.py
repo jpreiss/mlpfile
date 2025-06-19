@@ -11,7 +11,7 @@ from ._codegen import codegen_c, codegen_eigen
 
 
 __all__ = [
-    "Model", "Layer", "LayerType", # Bound class/enum.
+    "Model", "Layer", "LayerType", "LayerJacobian", # Bound class/enum.
     "squared_error", "softmax_cross_entropy", # Bound function.
     "codegen", "cpp_dir", # Pure Python.
 ]
