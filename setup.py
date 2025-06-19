@@ -3,7 +3,7 @@ import eigenpip
 from pybind11.setup_helpers import Pybind11Extension
 from setuptools import setup
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 ext_modules = [
     Pybind11Extension("_mlpfile",

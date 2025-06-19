@@ -55,7 +55,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "mlpfile"
-copyright = "2023, James A. Preiss"
+copyright = "2023-25, James A. Preiss"
 author = "James A. Preiss"
 
 # The version info for the project you're documenting, acts as replacement for
