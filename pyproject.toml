@@ -13,7 +13,6 @@ test-command = "pytest {project}/tests/test.py"
 test-skip = [
   "*universal2:arm64",  # TODO: Why?
   "cp37-*",             # Too old
-  "cp312-*",            # Too new (something w/ distutils)
   "*-manylinux_i686",   # PyTorch doesn't have 32-bit builds, I think
   "*-musllinux*",       # PyTorch doesn't have musl-compatible builds, I think
 ]
