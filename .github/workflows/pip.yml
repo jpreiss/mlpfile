@@ -40,9 +40,9 @@ jobs:
       # The unit tests use a recent feature of PyTorch to construct their
       # Jacobian for comparison. So it cannot run on old versions of Python.
       run: pytest tests/test.py
-      if: matrix.python-version == '3.11'
+      if: matrix.python-version == '3.13'
 
     - name: Benchmark
       # The benchmark also uses a recent feature of PyTorch (see above).
       run: python tests/benchmark.py
-      if: matrix.python-version == '3.11'
+      if: matrix.python-version == '3.13'
