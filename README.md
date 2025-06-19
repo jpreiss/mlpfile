@@ -1,16 +1,15 @@
-A simple file format and associated tools to save/load multilayer perceptrons
-(aka fully-connected neural networks).
+Simple and fast library for working with small multilayer perceptrons (aka fully-connected neural networks) on the CPU. Python/NumPy bindings and C++/Eigen core.
 
 Features:
-- Create the files in Python from a `torch.nn.Sequential`.
-- Load the files in C++, or in Python via bindings.
-- Evaluate the network and/or its Jacobian on an input.
-- Perform a step of gradient descent (in place, for one datapoint, no momentum).
-- C++ interface uses Eigen types.
-- Generate fast allocation-free C or C++/Eigen code (faster) for the forward pass.
+- Evaluate the forward pass faster than alternatives.
+- Compute derivatives of the network's output with respect to its input or parameters.
+- Take a step of online gradient descent in place.
+- Generate fast allocation-free C or C++/Eigen code for the forward pass.
+- Convert from a `torch.nn.Sequential` to our file format.
 - Binary file I/O (no C++ dependency on Protobuf, etc.)
 
 API docs: [https://jpreiss.github.io/mlpfile/api.html](https://jpreiss.github.io/mlpfile/api.html)
+
 
 Installation
 ------------
@@ -51,15 +50,11 @@ Performance
 -----------
 
 `mlpfile` is faster than popular alternatives for small networks on the CPU.
-This is a very small example, but such small networks can appear in
-time-sensitive realtime applications.
+Small networks can appear in time-sensitive realtime applications.
 
-Test hardware is a 2021 MacBook Pro with Apple M1 Pro CPU.
-
-`mlpfile` is over 3x faster than ONNX on both forward pass and Jacobian in this
-test. TorchScript is surprisingly fast for the manually-computed Jacobian, but
-is still slow for the forward pass. You can test on your own hardware by
-running `benchmark.py`.
+On a 2021 MacBook Pro M1, `mlpfile` is over 3x faster than ONNX and TorchScript
+on the forward pass. You can test on your own hardware by running
+`benchmark.py`.
 
 ```
 $ python benchmark.py
@@ -103,27 +98,16 @@ torch:  129.38 usec
 Motivation
 ----------
 
-The performance shown above is a major motivation, but besides that:
+The performance shown above is the #1 motivation. Aside from that:
 
-The typical choices for NN deployment from PyTorch to C++ (of which I am aware)
-are TorchScript and the ONNX format. Both are heavyweight and complicated
-because they are designed to handle general computation graphs like ResNets,
-Transformers, etc. Their Python packages are easy to use via `pip`, but their
-C++ packages aren't a part of standard package managers. Compiling from source
-is very slow for ONNX-runtime; I have not tried TorchScript yet.
+Popular tools for NN deployment from PyTorch to C++ are TorchScript and ONNX.
+Both are heavyweight because they handle general computation graphs like
+ResNets and Transformers. Their C++ packages are hard to compile, and some are
+platform-specific. Their file formats are complicated to parse manually.
 
-Intel and NVidia's ONNX loaders might be better, but they are not cross-platform.
-
-ONNX-runtime also doesn't make it easy to extract the model weights from the
-file. This means we can't (easily) use their file format and loader but compute
-the neural network function ourselves for maximum speed.
-
-Also, we want to evaluate the NN's Jacobian in our research application. It
-turns out that PyTorch's `torch.func.jacrev` generates a computational graph
-that can't be serialized with TorchScript or PyTorch's own ONNX exporter.
-Therefore, we must write the symbolically-derived Jacobian by hand in PyTorch.
-So that unwanted complexity must exist *somewhere*, whether it is C++ or
-Python.
+To take the NN's Jacobian with respect to its input, PyTorch's
+`torch.func.jacrev` generates a computation graph that can't be serialized with
+TorchScript or PyTorch's own ONNX exporter (circa 2023).
 
 
 File format
