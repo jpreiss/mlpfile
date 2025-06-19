@@ -14,6 +14,7 @@ INDIM = 40
 OUTDIM = 10
 HIDDEN = [100] * 2
 NET = mlpfile.torch.mlp(INDIM, OUTDIM, HIDDEN)
+NET_NOTEVAL = deepcopy(NET)
 NET.eval()
 JAC = torch.func.jacrev(NET)
 
@@ -54,6 +55,24 @@ def test_jacobian(model):
         Jtorch = JAC(x).detach().numpy()
         # TODO: Why do we need to loosen the tolerance?
         assert np.all(np.isclose(J.flat, Jtorch.flat, atol=1e-6, rtol=1e-4))
+
+
+def test_jacobian_params(model):
+    assert len(model.layers) == len(NET_NOTEVAL)
+    for i in range(100):
+        x = torch.randn(INDIM, requires_grad=False)
+        J = model.jacobian_params(x)
+        for j in range(OUTDIM):
+            NET_NOTEVAL.zero_grad()
+            y = NET_NOTEVAL.forward(x)
+            y[j].backward()
+            for layer, Jlayer, tparam in zip(model.layers, J, NET_NOTEVAL):
+                if layer.type != mlpfile.LayerType.Linear:
+                    continue
+                d_yj_W = Jlayer.dW[j].reshape(layer.W.shape)
+                # TODO: Why do we need to loosen the tolerance?
+                assert np.allclose(d_yj_W, tparam.weight.grad, atol=1e-6, rtol=1e-4)
+                assert np.allclose(Jlayer.db[j], tparam.bias.grad, atol=1e-6, rtol=1e-4)
 
 
 class GradCaseSqErr:
@@ -198,6 +217,98 @@ def test_random():
     y = r.forward([0, 0])
     assert y.size == 5
     r.jacobian([0, 0])
+
+
+# Basic test of dimensions.
+def test_jacobian_params_dim():
+    model = mlpfile.Model.random(INDIM, HIDDEN, OUTDIM)
+    x = np.random.normal(size=INDIM)
+
+    jac_params = model.jacobian_params(x)
+    assert len(jac_params) == len(model.layers)
+
+    outdim = model.output_dim()
+
+    for i, layer_jac in enumerate(jac_params):
+        layer = model.layers[i]
+        if layer.type == mlpfile.LayerType.Linear:
+            assert layer_jac.dW.shape == (outdim, np.prod(layer.W.shape))
+            assert layer_jac.db.shape == (outdim, layer.b.size)
+        else:
+            # ReLU layers should have empty Jacobians.
+            assert layer_jac.dW.shape == (0, 0)
+            assert layer_jac.db.shape == (0, 0)
+
+
+def test_jacobian_params_analytic():
+
+    model = mlpfile.Model()
+
+    layer0 = mlpfile.Layer()
+    layer0.type = mlpfile.LayerType.Linear
+    layer0.W = np.eye(2)
+    layer0.b = np.zeros(2)
+
+    layer1 = mlpfile.Layer()
+    layer1.type = mlpfile.LayerType.ReLU
+
+    layer2 = mlpfile.Layer()
+    layer2.type = mlpfile.LayerType.Linear
+    layer2.W = np.ones((1, 2))
+    layer2.b = np.zeros(1)
+
+    model.layers = [layer0, layer1, layer2]
+
+    # no ReLU
+    x = np.array([1, 2])
+
+    j0, _, j2 = model.jacobian_params(x)
+    assert j0.dW.shape == (1, 4)
+    assert np.all(j0.dW.reshape((2, 2)) == [x, x])
+    assert np.all(j0.db == [[1, 1]])
+
+    assert np.all(j2.dW == x[None, :])
+    assert np.all(j2.db == [[1]])
+
+    # ReLU
+    x = np.array([-1, 1])
+    j0, _, j2 = model.jacobian_params(x)
+    assert j0.dW.shape == (1, 4)
+    assert np.all(j0.dW.reshape((2, 2)) == [0 * x, x])
+    assert np.all(j0.db == [[0, 1]])
+
+    assert np.all(j2.dW == [[0, 1]])
+    assert np.all(j2.db == [[1]])
+
+
+def test_jacobian_params_finitediff():
+
+    trials = 10
+    for trial in range(trials):
+        x = np.random.normal(size=2)
+        # use prime numbers to bring out anything related to transpose
+        model = mlpfile.Model.random(2, [3], 5)
+        for layer in model.layers:
+            layer.W = np.abs(layer.W)
+        y = model.forward(x)
+        J = model.jacobian_params(x)
+
+        EPS = 1e-4
+        for _ in range(10):
+            model2 = deepcopy(model)
+            dy_pred = np.zeros(5)
+            for layer, Jlayer in zip(model2.layers, J):
+                if layer.type == mlpfile.LayerType.Linear:
+                    dW = EPS * np.random.normal(size=layer.W.shape)
+                    db = EPS * np.random.normal(size=layer.b.shape)
+                    # pybind11 doesn't give us +=. Not sure if worth fixing.
+                    layer.W = layer.W + dW
+                    layer.b = layer.b + db
+                    dy_pred += Jlayer.dW @ dW.flat / EPS
+                    dy_pred += Jlayer.db @ db / EPS
+            dy_actual = (model2.forward(x) - y) / EPS
+            # atol has to be pretty loose because ReLU is not smooth.
+            assert np.allclose(dy_pred, dy_actual, atol=1e-2)
 
 
 def test_cpp_dir(capfd):

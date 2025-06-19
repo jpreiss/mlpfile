@@ -28,6 +28,14 @@ namespace mlpfile
 		std::string describe() const;
 	};
 
+	struct LayerJacobian {
+		// dW's shape is [output dim x (W.rows * W.cols)].
+		// Stored in memory order such that viewing a row of dW as a row-major
+		// matrix of W's dimensions lines up correctly.
+		MatrixXfRow dW;
+		MatrixXfRow db;
+	};
+
 	// Args: Estimate, target. Returns: Gradient of loss w.r.t. estimate.
 	using LossGrad = std::function<Eigen::VectorXf(Eigen::VectorXf, Eigen::VectorXf)>;
 
@@ -40,7 +48,6 @@ namespace mlpfile
 	struct Model
 	{
 		std::vector<Layer> layers;
-		int _input_dim;
 
 		// Reads a model from our file format (see block comment at top of file).
 		static Model load(char const *path);
@@ -49,18 +56,22 @@ namespace mlpfile
 		// intended for unit test, etc, where the NN function doesn't matter.
 		static Model random(int input, std::vector<int> hidden, int output);
 
+		// these return -1 for error.
 		int output_dim() const;
 		int input_dim() const;
 
 		// Computes the forward pass of the neural network.
 		Eigen::VectorXf forward(Eigen::VectorXf x);
 
-		// Computes the Jacobian of the neural network.
+		// Computes the Jacobian of output w.r.t. input.
 		//
 		// Uses reverse-mode (backprop-style) differentiation, which is faster
 		// if the NN's output is smaller than its input. It would be easy to
 		// implement forward-mode too if needed, for the opposite case.
 		MatrixXfRow jacobian(Eigen::VectorXf const &x);
+
+		// Computes Jacobians of output w.r.t. all layer parameters.
+		std::vector<LayerJacobian> jacobian_params(Eigen::VectorXf const &x);
 
 		// Does a step of gradient descent for regression loss on one point.
 		//

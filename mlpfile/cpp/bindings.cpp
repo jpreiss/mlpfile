@@ -17,11 +17,18 @@ PYBIND11_MODULE(_mlpfile, m) {
 
     py::class_<mlpfile::Layer> (m, "Layer")
         .def(py::init<>())
-        .def_readonly("type", &mlpfile::Layer::type, "Layer type enum.")
-        .def_readonly("W", &mlpfile::Layer::W, "Linear layer weight.")
-        .def_readonly("b", &mlpfile::Layer::b, "Linear layer bias.")
+        .def_readwrite("type", &mlpfile::Layer::type, "Layer type enum.")
+        .def_readwrite("W", &mlpfile::Layer::W, "Linear layer weight.")
+        .def_readwrite("b", &mlpfile::Layer::b, "Linear layer bias.")
         .def("__str__", &mlpfile::Layer::describe)
         .doc() = "A single layer in an MLP. Limited functionality."
+    ;
+
+    py::class_<mlpfile::LayerJacobian> (m, "LayerJacobian")
+        .def(py::init<>())
+        .def_readonly("dW", &mlpfile::LayerJacobian::dW, "Jacobian w.r.t. weights.")
+        .def_readonly("db", &mlpfile::LayerJacobian::db, "Jacobian w.r.t. biases.")
+        .doc() = "Jacobian of network output w.r.t. a layer's parameters."
     ;
 
     // TODO: It would be great if we can figure out how to make pybind11
@@ -36,7 +43,7 @@ PYBIND11_MODULE(_mlpfile, m) {
             py::arg("path"))
         .def_static("random", &mlpfile::Model::random,
             "Generate a randomly initialized model.")
-        .def_readonly("layers", &mlpfile::Model::layers,
+        .def_readwrite("layers", &mlpfile::Model::layers,
             "List of the Layer objects.")
         .def("input_dim", &mlpfile::Model::input_dim,
             "Input dimensionality.")
@@ -47,6 +54,9 @@ PYBIND11_MODULE(_mlpfile, m) {
             py::arg("input"))
         .def("jacobian", &mlpfile::Model::jacobian,
             "Computes the MLP's Jacobian.",
+            py::arg("input"))
+        .def("jacobian_params", &mlpfile::Model::jacobian_params,
+            "Computes the MLP's Jacobian w.r.t. parameters.",
             py::arg("input"))
         .def("grad_update", &mlpfile::Model::grad_update,
             "Performs one step of gradient descent for one data point.",

@@ -78,7 +78,6 @@ namespace mlpfile
 		model.layers.resize(n_layers);
 
 		uint32_t size = readu32();
-		model._input_dim = size;
 
 		// Pass 1: Metadata
 		for (uint32_t i = 0; i < n_layers; ++i) {
@@ -129,7 +128,6 @@ namespace mlpfile
 	Model Model::random(int input, std::vector<int> hidden, int output)
 	{
 		Model m;
-		m._input_dim = input;
 		int size = input;
 		std::vector<int> widths = hidden;
 		widths.push_back(output);
@@ -149,7 +147,12 @@ namespace mlpfile
 
 	int Model::input_dim() const
 	{
-		return _input_dim;
+		for (Layer const &layer : layers) {
+			if (layer.type == LayerType::Linear) {
+				return layer.W.cols();
+			}
+		}
+		return -1;
 	}
 
 	int Model::output_dim() const
@@ -160,13 +163,12 @@ namespace mlpfile
 				return layer.b.rows();
 			}
 		}
-		// Empty or all-ReLU model: Degenerate case, but allowed.
-		return _input_dim;
+		return -1;
 	}
 
 	Eigen::VectorXf Model::forward(Eigen::VectorXf x)
 	{
-		if (x.rows() != _input_dim) {
+		if (x.rows() != input_dim()) {
 			throw std::runtime_error("incorrect input size");
 		}
 
@@ -223,6 +225,46 @@ namespace mlpfile
 		return *J;
 	}
 
+	std::vector<LayerJacobian> Model::jacobian_params(Eigen::VectorXf const &x)
+	{
+		std::vector<LayerJacobian> result(layers.size());
+		std::vector<Eigen::VectorXf> stack = fwdpass_stack(*this, x);
+
+		int outdim = output_dim();
+
+		MatrixXfRow J = MatrixXfRow::Identity(outdim, outdim);
+
+		// Backward pass.
+		for (int i = (int)layers.size() - 1; i >= 0; --i) {
+			stack.pop_back();
+			Eigen::VectorXf const &layer_in = stack.back();
+
+			if (layers[i].type == mlpfile::ReLU) {
+				for (int j = 0; j < layer_in.rows(); ++j) {
+					if (layer_in[j] <= 0.0f) {
+						J.col(j).setZero();
+					}
+				}
+			}
+			else if (layers[i].type == mlpfile::Linear) {
+				int rows = layers[i].W.rows();
+				int cols = layers[i].W.cols();
+
+				// Stored in memory order such that viewing a row of dW as a row-major
+				// matrix of W's dimensions lines up correctly.
+				result[i].dW = MatrixXfRow(outdim, rows * cols);
+				for (int j = 0; j < rows; ++j) {
+					auto view = result[i].dW.block(0, j * cols, outdim, cols);
+					view = J.col(j) * layer_in.transpose();
+				}
+				result[i].db = J;
+				J = J * layers[i].W;
+			}
+		}
+
+		return result;
+	}
+
 	void Model::grad_update(Eigen::VectorXf x, Eigen::VectorXf y, LossGrad loss, float rate)
 	{
 		std::vector<Eigen::VectorXf> stack = fwdpass_stack(*this, x);
@@ -261,7 +303,7 @@ namespace mlpfile
 	{
 		return
 			"mlpfile::Model with " + std::to_string(layers.size()) + " Layers, "
-			+ std::to_string(_input_dim) + " -> " + std::to_string(output_dim());
+			+ std::to_string(input_dim()) + " -> " + std::to_string(output_dim());
 	}
 
 	Eigen::VectorXf squared_error(Eigen::VectorXf y, Eigen::VectorXf target)
