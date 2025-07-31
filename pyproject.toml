@@ -7,7 +7,8 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
-skip = "pp*"  # No PyPy since we use C extension
+# No PyPy since we use C extension. No 3.14 until deps are ready.
+skip = ["pp*", "cp314-*"]
 test-requires = ["numpy<2", "eigenpip", "pytest", "torch"]
 test-command = "pytest {project}/tests/test.py"
 test-skip = [
