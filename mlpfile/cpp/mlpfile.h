@@ -36,6 +36,11 @@ namespace mlpfile
 		MatrixXfRow db;
 	};
 
+	struct SpecNormState {
+		Eigen::VectorXf u;
+		Eigen::VectorXf v;
+	};
+
 	// Args: Estimate, target. Returns: Gradient of loss w.r.t. estimate.
 	using LossGrad = std::function<Eigen::VectorXf(Eigen::VectorXf, Eigen::VectorXf)>;
 
@@ -48,6 +53,7 @@ namespace mlpfile
 	struct Model
 	{
 		std::vector<Layer> layers;
+		std::vector<Eigen::VectorXf> spec_norm;
 
 		// Reads a model from our file format (see block comment at top of file).
 		static Model load(char const *path);
@@ -81,7 +87,14 @@ namespace mlpfile
 		// equivalent NumPy signature.
 		void grad_update(Eigen::VectorXf x, Eigen::VectorXf y, LossGrad loss, float rate);
 
+		// Initializes spectral normalization.
+		void spec_norm_init();
+
+		// Updates spectral normalization (call after gradient update).
+		void spec_norm_update(int power_iterations = 1);
+
 		// Pretty-prints a description of the network architecture.
 		std::string describe() const;
 	};
+
 }  // namespace mlpfile
