@@ -247,11 +247,11 @@ def compare_ogd(net_ours):
 
 
 def _printbox(s):
-    n = len(s) + 2
+    h = "-" * (len(s) + 2)
     print()
-    print("┌" + ("─" * n) + "┐")
-    print("│", s, "│")
-    print("└" + ("─" * n) + "┘")
+    print("┌" + h + "┐")
+    print("│",  s,  "│")
+    print("└" + h + "┘")
 
 
 def main():
