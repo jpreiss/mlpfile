@@ -334,6 +334,11 @@ def test_specnorm_basic():
     assert np.isclose(L, 1)
 
 
+def test_specnorm_uninit():
+    model = mlpfile.Model.random(1, [1], 1)
+    model.spec_norm_update(1)
+
+
 def test_specnorm_doesnt_magnify():
     model = mlpfile.Model()
 

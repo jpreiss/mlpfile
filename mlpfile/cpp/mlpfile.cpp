@@ -314,9 +314,11 @@ namespace mlpfile
 		if (power_iterations < 1) {
 			return;
 		}
+		if (spec_norm.size() == 0) {
+			spec_norm_init();
+		}
 		float const EPSILON = 1e-12; // PyTorch's default
 		int u_idx = 0;
-		// TODO: handle normalization when products are close to 0.
 		for (Layer &layer : layers) {
 			if (layer.type != LayerType::Linear) {
 				continue;
