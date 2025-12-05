@@ -2,8 +2,9 @@ Simple and fast library for working with small multilayer perceptrons (aka fully
 
 Features:
 - Evaluate the forward pass faster than alternatives.
-- Compute derivatives of the network's output with respect to its input or parameters.
+- Compute derivatives of the network's output (Jacobians) with respect to its input or parameters.
 - Take a step of online gradient descent in place.
+- Spectral normalization to ensure a 1-Lipschitz function is learned.
 - Generate fast allocation-free C or C++/Eigen code for the forward pass.
 - Convert from a `torch.nn.Sequential` to our file format.
 - Binary file I/O (no C++ dependency on Protobuf, etc.)
