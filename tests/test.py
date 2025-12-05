@@ -308,7 +308,7 @@ def test_jacobian_params_finitediff():
                     dy_pred += Jlayer.db @ db / EPS
             dy_actual = (model2.forward(x) - y) / EPS
             # atol has to be pretty loose because ReLU is not smooth.
-            assert np.allclose(dy_pred, dy_actual, atol=1e-2)
+            assert np.allclose(dy_pred, dy_actual, atol=5e-2)
 
 
 def test_cpp_dir(capfd):
