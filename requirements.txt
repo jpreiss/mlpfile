@@ -2,6 +2,7 @@ eigenpip
 numpy
 onnx
 onnxruntime
+onnxscript
 pybind11
 pytest
 setuptools
