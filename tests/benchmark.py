@@ -43,7 +43,7 @@ class MLPJacobian(torch.nn.Module):
                     J = J @ m.weight
             elif isinstance(m, torch.nn.ReLU):
                 f = stack.pop()
-                mask = f > 0
+                mask = (f > 0).float()
                 # Note: Ensuring performance optimization that multiplication
                 # with diagonal is O(n^2), not O(n^3):
                 #     diag(x) @ A == x[:, None] * A
