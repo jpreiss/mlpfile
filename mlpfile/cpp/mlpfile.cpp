@@ -314,6 +314,7 @@ namespace mlpfile
 		if (power_iterations < 1) {
 			return;
 		}
+		float const EPSILON = 1e-12; // PyTorch's default
 		int u_idx = 0;
 		// TODO: handle normalization when products are close to 0.
 		for (Layer &layer : layers) {
@@ -325,9 +326,9 @@ namespace mlpfile
 			Eigen::VectorXf v;
 			for (int i = 0; i < power_iterations; ++i) {
 				auto Wu = W * u;
-				v = Wu / Wu.norm();
+				v = Wu / (Wu.norm() + EPSILON);
 				auto WTv = W.transpose() * v;
-				u = WTv / WTv.norm();
+				u = WTv / (WTv.norm() + EPSILON);
 			}
 			float sigma = v.dot(W * u);
 			if (sigma > 1) {
