@@ -311,27 +311,30 @@ namespace mlpfile
 
 	void Model::spec_norm_update(int power_iterations)
 	{
+		if (power_iterations < 1) {
+			return;
+		}
 		int u_idx = 0;
 		// TODO: handle normalization when products are close to 0.
 		// TODO: tests.
-		for (Layer const &layer : layers) {
-			if (layer.type == LayerType::Linear) {
-				MatrixXfRow const &W = layer.W;
-				Eigen::VectorXf u = spec_norm[u_idx];
-				Eigen::VectorXf v;
-				for (int i = 0; i < power_iterations; ++i) {
-					auto Wu = W * u;
-					v = Wu / Wu.norm();
-					auto WTv = W.transpose() * v;
-					u = WTv / WTv.norm();
-				}
-				float sigma = v.dot(W * u);
-				layer.W *= 1.0f / sigma;
-				spec_norm[u_idx] = u;
-				++u_idx;
+		for (Layer &layer : layers) {
+			if (layer.type != LayerType::Linear) {
+				continue;
 			}
+			MatrixXfRow const &W = layer.W;
+			Eigen::VectorXf u = spec_norm[u_idx];
+			Eigen::VectorXf v;
+			for (int i = 0; i < power_iterations; ++i) {
+				auto Wu = W * u;
+				v = Wu / Wu.norm();
+				auto WTv = W.transpose() * v;
+				u = WTv / WTv.norm();
+			}
+			float sigma = v.dot(W * u);
+			layer.W *= 1.0f / sigma;
+			spec_norm[u_idx] = u;
+			++u_idx;
 		}
-		
 	}
 
 	std::string Model::describe() const

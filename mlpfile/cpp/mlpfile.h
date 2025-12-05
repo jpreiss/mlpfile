@@ -36,11 +36,6 @@ namespace mlpfile
 		MatrixXfRow db;
 	};
 
-	struct SpecNormState {
-		Eigen::VectorXf u;
-		Eigen::VectorXf v;
-	};
-
 	// Args: Estimate, target. Returns: Gradient of loss w.r.t. estimate.
 	using LossGrad = std::function<Eigen::VectorXf(Eigen::VectorXf, Eigen::VectorXf)>;
 

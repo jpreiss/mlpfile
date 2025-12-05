@@ -311,6 +311,33 @@ def test_jacobian_params_finitediff():
             assert np.allclose(dy_pred, dy_actual, atol=5e-2)
 
 
+def test_specnorm_basic():
+    model = mlpfile.Model()
+
+    layer = mlpfile.Layer()
+    layer.type = mlpfile.LayerType.Linear
+    layer.W = np.diag([1, 2])
+    layer.b = np.zeros(2)
+
+    model.layers = [layer]
+    model.spec_norm_init()
+    # nonsense checks
+    model.spec_norm_update(power_iterations=-1)
+    model.spec_norm_update(power_iterations=0)
+    # check u
+    model.spec_norm_update(power_iterations=100)
+    u = model.spec_norm[0]
+    target = [0, 1]
+    assert np.allclose(u, target) or np.allclose(-u, target)
+    # check W
+    L = np.linalg.norm(model.layers[0].W, ord=2)
+    assert np.isclose(L, 1)
+
+
+def test_specnorm_against_ogd():
+    # TODO: set up an OGD regression trying to map 1 to 10 and -1 to -10. with a single linear layer with scalar inputs and outputs. Do interleaved steps of OGD and spec_norm_update. Make sure the scalar W stays at 1 even though 10 would be optimal.
+
+
 def test_cpp_dir(capfd):
     mlpfile.cpp_dir()
     out, _ = capfd.readouterr()
