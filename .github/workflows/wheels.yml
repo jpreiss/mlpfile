@@ -41,6 +41,9 @@ jobs:
         os: [ubuntu-latest, macos-latest]
 
     steps:
+    - name: Reclaim Disk
+      run: sudo rm -rf /opt/hostedtoolcache || true
+      
     - uses: actions/checkout@v5
 
     - uses: pypa/cibuildwheel@v3.1.4
