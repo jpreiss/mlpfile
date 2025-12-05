@@ -299,6 +299,46 @@ namespace mlpfile
 		// TODO: validate dimensionality
 	}
 
+	void Model::spec_norm_init()
+	{
+		for (Layer const &layer : layers) {
+			if (layer.type == LayerType::Linear) {
+				size_t indim = layer.W.cols();
+				spec_norm.push_back(Eigen::VectorXf::Random(indim));
+			}
+		}
+	}
+
+	void Model::spec_norm_update(int power_iterations)
+	{
+		if (power_iterations < 1) {
+			return;
+		}
+		float const EPSILON = 1e-12; // PyTorch's default
+		int u_idx = 0;
+		// TODO: handle normalization when products are close to 0.
+		for (Layer &layer : layers) {
+			if (layer.type != LayerType::Linear) {
+				continue;
+			}
+			MatrixXfRow const &W = layer.W;
+			Eigen::VectorXf u = spec_norm[u_idx];
+			Eigen::VectorXf v;
+			for (int i = 0; i < power_iterations; ++i) {
+				auto Wu = W * u;
+				v = Wu / (Wu.norm() + EPSILON);
+				auto WTv = W.transpose() * v;
+				u = WTv / (WTv.norm() + EPSILON);
+			}
+			float sigma = v.dot(W * u);
+			if (sigma > 1) {
+				layer.W *= 1.0f / sigma;
+			}
+			spec_norm[u_idx] = u;
+			++u_idx;
+		}
+	}
+
 	std::string Model::describe() const
 	{
 		return

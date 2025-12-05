@@ -46,6 +46,8 @@ PYBIND11_MODULE(_mlpfile, m) {
             "Generate a randomly initialized model.")
         .def_readwrite("layers", &mlpfile::Model::layers,
             "List of the Layer objects.")
+        .def_readwrite("spec_norm", &mlpfile::Model::spec_norm,
+            "List of spectral normalization operator norm argmax vectors.")
         .def("input_dim", &mlpfile::Model::input_dim,
             "Input dimensionality.")
         .def("output_dim", &mlpfile::Model::output_dim,
@@ -62,6 +64,11 @@ PYBIND11_MODULE(_mlpfile, m) {
         .def("grad_update", &mlpfile::Model::grad_update,
             "Performs one step of gradient descent for one data point.",
             py::arg("x"), py::arg("y"), py::arg("loss"), py::arg("rate"))
+        .def("spec_norm_init", &mlpfile::Model::spec_norm_init,
+            "Initializes state for spectral normalization.")
+        .def("spec_norm_update", &mlpfile::Model::spec_norm_update,
+            "Updates spectral normalization. Call after a param update.",
+            py::arg("power_iterations"))
         .def("__str__", &mlpfile::Model::describe)
         .def("__copy__",  [](mlpfile::Model const &self) {
             return mlpfile::Model(self);

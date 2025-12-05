@@ -311,6 +311,75 @@ def test_jacobian_params_finitediff():
             assert np.allclose(dy_pred, dy_actual, atol=5e-2)
 
 
+def test_specnorm_basic():
+    model = mlpfile.Model()
+
+    layer = mlpfile.Layer()
+    layer.type = mlpfile.LayerType.Linear
+    layer.W = np.diag([1, 2])
+    layer.b = np.zeros(2)
+
+    model.layers = [layer]
+    model.spec_norm_init()
+    # nonsense checks
+    model.spec_norm_update(power_iterations=-1)
+    model.spec_norm_update(power_iterations=0)
+    # check u
+    model.spec_norm_update(power_iterations=100)
+    u = model.spec_norm[0]
+    target = [0, 1]
+    assert np.allclose(u, target) or np.allclose(-u, target)
+    # check W
+    L = np.linalg.norm(model.layers[0].W, ord=2)
+    assert np.isclose(L, 1)
+
+
+def test_specnorm_doesnt_magnify():
+    model = mlpfile.Model()
+
+    layer = mlpfile.Layer()
+    layer.type = mlpfile.LayerType.Linear
+    layer.W = np.diag([0.1])
+    layer.b = np.zeros(1)
+    model.layers = [layer]
+
+    model.spec_norm_init()
+    model.spec_norm_update(power_iterations=100)
+    assert np.isclose(model.layers[0].W[0, 0], 0.1)
+
+
+def test_specnorm_fighting_ogd():
+    # Regression to map 1 to 10 and -1 to -10. Interleave steps of OGD and
+    # spec_norm_update. Make sure W stays at 1 even though 10 would be optimal.
+    model = mlpfile.Model()
+
+    layer = mlpfile.Layer()
+    layer.type = mlpfile.LayerType.Linear
+    layer.W = np.diag([1])
+    layer.b = np.zeros(1)
+    model.layers = [layer]
+
+    model.spec_norm_init()
+
+    xs = [np.array([1]), np.array([-1])]
+    ys = [np.array([10]), np.array([-10])]
+
+    rate = 1e-1
+    iters = 100
+
+    for i in range(iters):
+        for x, y in zip(xs, ys):
+            model.grad_update(x, y, mlpfile.squared_error, rate)
+        model.spec_norm_update(power_iterations=1)
+    assert np.allclose(model.layers[0].W[0, 0], 1.0)
+
+    # Without SpecNorm
+    for i in range(iters):
+        for x, y in zip(xs, ys):
+            model.grad_update(x, y, mlpfile.squared_error, rate)
+    assert np.allclose(model.layers[0].W[0, 0], 10.0)
+
+
 def test_cpp_dir(capfd):
     mlpfile.cpp_dir()
     out, _ = capfd.readouterr()
