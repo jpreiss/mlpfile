@@ -348,7 +348,7 @@ def test_specnorm_doesnt_magnify():
     assert np.isclose(model.layers[0].W[0, 0], 0.1)
 
 
-def test_specnorm_against_ogd():
+def test_specnorm_fighting_ogd():
     # Regression to map 1 to 10 and -1 to -10. Interleave steps of OGD and
     # spec_norm_update. Make sure W stays at 1 even though 10 would be optimal.
     model = mlpfile.Model()

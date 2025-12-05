@@ -316,7 +316,6 @@ namespace mlpfile
 		}
 		int u_idx = 0;
 		// TODO: handle normalization when products are close to 0.
-		// TODO: tests.
 		for (Layer &layer : layers) {
 			if (layer.type != LayerType::Linear) {
 				continue;
