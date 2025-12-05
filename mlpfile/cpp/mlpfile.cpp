@@ -331,7 +331,9 @@ namespace mlpfile
 				u = WTv / WTv.norm();
 			}
 			float sigma = v.dot(W * u);
-			layer.W *= 1.0f / sigma;
+			if (sigma > 1) {
+				layer.W *= 1.0f / sigma;
+			}
 			spec_norm[u_idx] = u;
 			++u_idx;
 		}
